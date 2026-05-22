@@ -5241,6 +5241,96 @@ function wireSafeLogin(){
   safeApplyLogin();
 }
 
+
+/* FORCE START HERE DEFAULT CUSTOMER/SITE DROPDOWNS */
+const WGE_DEFAULT_CUSTOMERS_FOR_RAISE = [
+  {id:"cust_kensal",name:"Kensal",invoiceAddress:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR",invoiceEmail:"accounts@kensal.com",sites:[
+    {id:"site_kensal_bps",name:"British Pepper and Spice",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR"},
+    {id:"site_kensal_barts",name:"Barts",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR"},
+    {id:"site_kensal_chivas",name:"Chivas Regal",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR"},
+    {id:"site_kensal_jd",name:"JD Sports",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR"},
+    {id:"site_kensal_lrs",name:"Lucozade Ribena Suntory",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR"},
+    {id:"site_kensal_mccormick",name:"McCormick",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR"}]},
+  {id:"cust_ashco",name:"ASHCO Building and Maintenance Services Ltd",invoiceAddress:"C/O The Demcom Stadium\nDownham Road\nEly\nCambs\nCB6 2SH",invoiceEmail:"office@ashcoservices.co.uk; trevor@ashcoservices.co.uk",sites:[
+    {id:"site_ashco_colindale",name:"Colindale",address:"C/O The Demcom Stadium\nDownham Road\nEly\nCambs\nCB6 2SH"}]},
+  {id:"cust_team",name:"Team Consulting Ltd",invoiceAddress:"Abbey Barns\nDuxford Road\nIckleton\nCambridge\nCB10 1SX",invoiceEmail:"Martin.bond@team-consulting.com",sites:[
+    {id:"site_team_abbey",name:"Team Abbey Barns",address:"Abbey Barns\nDuxford Road\nIckleton\nCambridge\nCB10 1SX"}]},
+  {id:"cust_stamford",name:"Stamford Stone Company Ltd",invoiceAddress:"Stamford Stone Company Ltd\nSwaddywell Quarry\nStamford Road\nHelpston\nPeterborough\nPE6 7EL",invoiceEmail:"shelley@stamfordstone.co.uk",sites:[
+    {id:"site_stamford_hollywell",name:"Hollywell Quarry",address:"Swaddywell Quarry\nStamford Road\nHelpston\nPeterborough\nPE6 7EL"}]},
+  {id:"cust_mccormick",name:"McCormick",invoiceAddress:"McCormick\nAlwalton Hill\nPeterborough\nPE7 3HH",invoiceEmail:"AP_UK@mccormick.com",sites:[
+    {id:"site_mccormick_pboro",name:"McCormick Peterborough",address:"McCormick\nAlwalton Hill\nPeterborough\nPE7 3HH"}]},
+  {id:"cust_princes",name:"Princes Group PLC",invoiceAddress:"Princes Group PLC\nRoyal Liver Building\nPier Head\nLiverpool\nL3 1NX",invoiceEmail:"ukaccountspayable@princes.co.uk",sites:[
+    {id:"site_princes_longsutton",name:"Long Sutton",address:"Bridge Road\nLong Sutton\nSpalding\nLincolnshire\nPE12 9EQ",contacts:[{name:"David Pickaver",email:""}]}]}
+];
+
+function forceMergeDefaultCustomers(){
+  if(!Array.isArray(window.customers)) window.customers = [];
+  WGE_DEFAULT_CUSTOMERS_FOR_RAISE.forEach(seed=>{
+    let c = window.customers.find(x => String(x.name||"").toLowerCase() === seed.name.toLowerCase());
+    if(!c){
+      c = {id:seed.id,name:seed.name,invoiceAddress:seed.invoiceAddress,invoiceEmail:seed.invoiceEmail,sites:[]};
+      window.customers.push(c);
+    }
+    c.id = c.id || seed.id;
+    c.invoiceAddress = c.invoiceAddress || seed.invoiceAddress;
+    c.invoiceEmail = c.invoiceEmail || seed.invoiceEmail;
+    if(!Array.isArray(c.sites)) c.sites = [];
+    seed.sites.forEach(site=>{
+      let s = c.sites.find(x => String(x.name||"").toLowerCase() === site.name.toLowerCase());
+      if(!s) c.sites.push({...site});
+      else {
+        s.id = s.id || site.id;
+        s.address = s.address || site.address;
+        s.contacts = s.contacts || site.contacts || [];
+      }
+    });
+  });
+  try{ saveAll(); }catch(e){}
+}
+
+function forcePopulateStartHereCustomers(){
+  forceMergeDefaultCustomers();
+  const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
+  if(!custSel) return;
+  const previous = custSel.value;
+  custSel.innerHTML = '<option value="">Select customer</option>' + window.customers.map(c => `<option value="${c.id}">${safe(c.name||"Customer")}</option>`).join("");
+  if(previous && window.customers.some(c => String(c.id) === String(previous))) custSel.value = previous;
+  forcePopulateStartHereSites();
+}
+
+function forcePopulateStartHereSites(){
+  const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
+  const siteSel = document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite");
+  const typeSel = document.getElementById("raiseQuoteType") || document.getElementById("workspaceQuoteType");
+  if(!custSel || !siteSel) return;
+  const c = window.customers.find(x => String(x.id) === String(custSel.value || ""));
+  const previous = siteSel.value;
+  siteSel.innerHTML = '<option value="">Select site</option>' + ((c && c.sites) || []).map(s => `<option value="${s.id}">${safe(s.name||"Site")}</option>`).join("");
+  if(previous && c && (c.sites||[]).some(s => String(s.id) === String(previous))) siteSel.value = previous;
+  if(typeSel){
+    const name = String(c?.name || "").toLowerCase();
+    typeSel.value = name.includes("ashco") ? "ashco" : name.includes("kensal") ? "kensal" : "standard";
+  }
+}
+
+function wireForceStartHereDropdowns(){
+  forcePopulateStartHereCustomers();
+  const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
+  const siteSel = document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite");
+  if(custSel && custSel.dataset.forceLinked !== "1"){
+    custSel.dataset.forceLinked = "1";
+    custSel.addEventListener("change", forcePopulateStartHereSites);
+  }
+  if(siteSel && siteSel.dataset.forceLinked !== "1"){
+    siteSel.dataset.forceLinked = "1";
+    siteSel.addEventListener("change", forcePopulateStartHereSites);
+  }
+}
+
+setTimeout(wireForceStartHereDropdowns, 200);
+setTimeout(wireForceStartHereDropdowns, 800);
+setTimeout(wireForceStartHereDropdowns, 1500);
+
 document.addEventListener("DOMContentLoaded",()=>{loadAll();seedIfEmpty();document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));document.querySelectorAll("[data-user]").forEach(b=>b.addEventListener("click",()=>{currentUser=b.dataset.user;el("currentUserLabel").textContent=currentUser==="DG"?"David Job Schedule":currentUser==="MASTER"?"Master View":"Wayne Job Schedule";initialiseQuoteEnquiry();if(el("saveQuoteBtn"))el("saveQuoteBtn").addEventListener("click",()=>saveCurrentQuote());
 if(el("newQuoteBtn"))el("newQuoteBtn").addEventListener("click",newBlankQuote);
 if(el("quoteSearch"))el("quoteSearch").addEventListener("input",renderQuoteRegister);
@@ -5280,7 +5370,7 @@ if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{tr
 if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
 if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
 if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
+syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();wireForceStartHereDropdowns();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
 if(el("quoteContact"))el("quoteContact").addEventListener("change",()=>{populateQuoteContacts();renderQuotePreview()});el("jobCustomer").addEventListener("change",populateJobSite);el("jobOwner").addEventListener("change",renderJobs);el("addCustomerBtn").addEventListener("click",addCustomer);if(el("seedDefaultCustomersBtn"))el("seedDefaultCustomersBtn").addEventListener("click",seedWGEDefaultCustomers);el("addSiteBtn").addEventListener("click",addSite);if(el("addSiteContactBtn"))el("addSiteContactBtn").addEventListener("click",addSiteContact);
 if(el("deleteSiteBtn"))el("deleteSiteBtn").addEventListener("click",deleteSelectedSite);
 if(el("deleteCustomerBtn"))el("deleteCustomerBtn").addEventListener("click",deleteSelectedCustomer);if(el("selectJobFolderBtn"))el("selectJobFolderBtn").addEventListener("click",selectJobFolder);
@@ -5334,7 +5424,7 @@ if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{tr
 if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
 if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
 if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();renderAll()})
+syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();wireForceStartHereDropdowns();renderAll()})
 </script>
 
 <script>
