@@ -1008,12 +1008,51 @@ z-index:0;
 }
 
 
-/* QUOTE REGISTER FILTER FIXES */
-.quoteRegisterExtraFilters{
+/* QUOTE REGISTER FILTERS + LOAD FIX */
+.quoteRegisterExtraFilters{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:10px}
+
+
+/* QUOTE WORKSPACE REWORK */
+.quoteWorkspaceHero{
+  background:linear-gradient(135deg,#eff6ff,#f8fafc);
+  border:1px solid #bfdbfe;
+  border-radius:22px;
+  padding:16px;
+  margin-bottom:14px;
+}
+.quoteWorkspaceGrid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-  gap:10px;
-  margin-top:10px;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:12px;
+}
+.quoteWorkspaceStep{
+  background:white;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:12px;
+}
+.quoteWorkspaceStep strong{
+  display:block;
+  color:#075985;
+  margin-bottom:5px;
+}
+.quoteWorkspaceActions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+.activeQuoteBanner{
+  background:#dcfce7;
+  color:#166534;
+  border:1px solid #86efac;
+  border-radius:16px;
+  padding:10px 12px;
+  margin:10px 0;
+  font-weight:900;
+}
+.quoteHiddenDirectTab{
+  display:none!important;
 }
 
 </style>
@@ -1530,6 +1569,53 @@ z-index:0;
 
 
 
+
+<section id="quoteWorkspace" class="hidden">
+  <div class="card quoteWorkspaceHero">
+    <h2>Raise Quote</h2>
+    <p class="muted small">Start here. Create the quote number first, then the app only opens the quote generator and correct costing sheet for that quote.</p>
+
+    <div class="quoteWorkspaceGrid">
+      <div class="quoteWorkspaceStep">
+        <strong>1. Owner</strong>
+        <select id="workspaceOwner">
+          <option value="Wayne Bonney">WB - Wayne Bonney</option>
+          <option value="David Guy">DG - David Guy</option>
+        </select>
+      </div>
+      <div class="quoteWorkspaceStep">
+        <strong>2. Customer</strong>
+        <select id="workspaceCustomer"></select>
+      </div>
+      <div class="quoteWorkspaceStep">
+        <strong>3. Site</strong>
+        <select id="workspaceSite"></select>
+      </div>
+      <div class="quoteWorkspaceStep">
+        <strong>4. Quote Type</strong>
+        <select id="workspaceQuoteType">
+          <option value="standard">Standard Costing</option>
+          <option value="ashco">ASHCO Costing</option>
+          <option value="kensal">Kensal Costing</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="quoteWorkspaceActions">
+      <button class="btn" id="workspaceCreateQuoteBtn" type="button">Create Quote Number & Open Workspace</button>
+      <button class="btn2" id="workspaceOpenRegisterBtn" type="button">Open Saved Quotes</button>
+    </div>
+
+    <div id="activeQuoteBanner" class="activeQuoteBanner hidden"></div>
+  </div>
+
+  <div class="card">
+    <h2>Saved Quotes / Revisions</h2>
+    <p class="muted small">Load, revise, mark sent/accepted or search old quotes from here.</p>
+    <div id="workspaceQuoteRegisterMount"></div>
+  </div>
+</section>
+
 <section id="quoteprint" class="hidden">
 
 <div class="card quoteNoPrint quoteStoragePanel">
@@ -1546,22 +1632,6 @@ z-index:0;
     <button class="btn2" id="createRevisionBtn" type="button">Create Revision</button>
     <button class="btnGreen" id="markAcceptedBtn" type="button">Mark Accepted</button>
     <button class="btnRed" id="markLostBtn" type="button">Mark Lost</button>
-  </div>
-  <div class="quoteRegisterExtraFilters">
-    <div>
-      <label>Owner</label>
-      <select id="quoteRegisterOwnerFilter">
-        <option value="">All</option>
-        <option value="WB">WB / Wayne</option>
-        <option value="DG">DG / David</option>
-      </select>
-    </div>
-    <div>
-      <label>Site</label>
-      <select id="quoteRegisterSiteFilter">
-        <option value="">All Sites</option>
-      </select>
-    </div>
   </div>
   <div id="quoteStorageMessage" class="muted small" style="margin-top:8px">No quote saved yet.</div>
   <div id="quoteStorageList" class="quoteStorageList"></div>
@@ -4740,148 +4810,99 @@ async function convertQuoteToJob(){
 }
 
 
-/* QUOTE REGISTER LOAD REVISION FILTER FIXES */
-function quoteOwnerInitials(q){
-  const ref = String(q.quoteRef || "").toUpperCase();
-  if(ref.startsWith("DG")) return "DG";
+/* QUOTE REGISTER LOAD / REVISION / FILTER FIX */
+function cleanRevisionRef(ref){return String(ref||"").replace(/\s+Rev(?:ision)?\s+\d+$/i,"").trim();}
+function ownerInitialsFromQuote(q){
+  const ref=String(q.quoteRef||"");
   if(ref.startsWith("WB")) return "WB";
-  const owner = String(q.owner || q.preparedBy || "").toLowerCase();
-  if(owner.includes("david")) return "DG";
-  if(owner.includes("wayne")) return "WB";
-  return "";
+  if(ref.startsWith("DG")) return "DG";
+  const owner=String(q.owner||q.preparedBy||"").toLowerCase();
+  return owner.includes("david") ? "DG" : "WB";
 }
-
-function cleanRevisionRef(ref, rev){
-  const base = String(ref || "Quote").replace(/\s+Rev\s+\d+$/ig, "").trim();
-  return Number(rev || 0) > 0 ? `${base} Rev ${Number(rev)}` : base;
+function ensureQuoteRegisterFilterControls(){
+  const panel=document.querySelector(".quoteStorageControls") || document.querySelector("#quoteRegisterSearch")?.closest(".card,div");
+  if(!panel || document.getElementById("quoteRegisterOwnerFilter")) return;
+  const wrap=document.createElement("div");
+  wrap.className="quoteRegisterExtraFilters";
+  wrap.innerHTML=`<div><label>Owner</label><select id="quoteRegisterOwnerFilter"><option value="">All</option><option value="WB">WB - Wayne</option><option value="DG">DG - David</option></select></div><div><label>Site</label><select id="quoteRegisterSiteFilter"><option value="">All sites</option></select></div>`;
+  panel.insertAdjacentElement("afterend",wrap);
+  document.getElementById("quoteRegisterOwnerFilter").addEventListener("change",renderQuoteStorageList);
+  document.getElementById("quoteRegisterSiteFilter").addEventListener("change",renderQuoteStorageList);
 }
-
-function populateQuoteSiteFilter(){
-  const sel = el("quoteRegisterSiteFilter");
-  if(!sel || typeof loadQuoteRegister !== "function") return;
-  const current = sel.value || "";
-  const sites = [...new Set(loadQuoteRegister().map(q=>q.site).filter(Boolean))].sort();
-  sel.innerHTML = `<option value="">All Sites</option>` + sites.map(s=>`<option value="${safe(s)}">${safe(s)}</option>`).join("");
-  if(current && sites.includes(current)) sel.value = current;
+function populateQuoteRegisterSiteFilter(){
+  const select=document.getElementById("quoteRegisterSiteFilter");
+  if(!select || typeof loadQuoteRegister!=="function") return;
+  const current=select.value;
+  const sites=[...new Set(loadQuoteRegister().map(q=>q.site).filter(Boolean))].sort();
+  select.innerHTML=`<option value="">All sites</option>`+sites.map(s=>`<option value="${safe(s)}">${safe(s)}</option>`).join("");
+  if(current && sites.includes(current)) select.value=current;
 }
-
 function loadStoredQuote(id){
-  const q = loadQuoteRegister().find(x=>String(x.id)===String(id));
+  const q=loadQuoteRegister().find(x=>String(x.id)===String(id));
   if(!q) return alert("Quote not found.");
-
-  currentStoredQuoteId = q.id;
-
-  const setVal = (id,val)=>{ const x=el(id); if(x) x.value = val ?? ""; };
-
-  setVal("quoteRef", cleanRevisionRef(q.quoteRef, q.revision));
-  setVal("quoteProjectTitle", q.project || q.projectTitle || "");
-  setVal("quoteEnquiry", q.enquiry || "");
-  setVal("quoteRoughScope", q.roughScope || "");
-  setVal("quoteScope", q.polishedScope || q.scope || "");
-  setVal("quoteAssumptions", q.assumptions || "");
-  setVal("quoteNetPrice", q.netPrice || "");
-  setVal("quoteDropboxFolder", q.folderPath || "");
-  setVal("quoteFolderPath", q.folderPath || "");
-  setVal("quoteOrderNumber", q.orderNumber || "");
-  setVal("quoteSiteAddress", q.siteAddress || "");
-  setVal("quoteEmailAddress", q.contactEmail || q.email || "");
-
-  if(el("quoteOwnerSelect")) el("quoteOwnerSelect").value = q.owner || q.preparedBy || "Wayne Bonney";
-  if(el("quotePreparedBy")) el("quotePreparedBy").value = q.owner || q.preparedBy || "";
-  if(el("quoteTypeSelect")) el("quoteTypeSelect").value = q.quoteType || "standard";
-
-  if(el("quoteCustomer") && q.customerId) el("quoteCustomer").value = q.customerId;
-  try{ if(typeof populateQuoteSite === "function") populateQuoteSite(); }catch(e){}
-  if(el("quoteSite") && q.siteId) el("quoteSite").value = q.siteId;
-
-  try{ if(typeof syncQuoteOwnerDetails==="function") syncQuoteOwnerDetails(); }catch(e){}
-  try{ if(typeof renderQuotePreview==="function") renderQuotePreview(); }catch(e){}
-  try{ showTab("quoteprint"); }catch(e){}
-
-  if(el("quoteStorageMessage")) el("quoteStorageMessage").textContent = `Loaded ${cleanRevisionRef(q.quoteRef, q.revision)}.`;
+  currentStoredQuoteId=q.id;
+  const setVal=(id,val)=>{const x=el(id); if(x) x.value=val ?? "";};
+  setVal("quoteRef",q.quoteRef); setVal("quoteProjectTitle",q.project||q.projectTitle);
+  setVal("quoteEnquiry",q.enquiry); setVal("quoteRoughScope",q.roughScope);
+  setVal("quoteScope",q.polishedScope||q.scope); setVal("quoteAssumptions",q.assumptions);
+  setVal("quoteNetPrice",q.netPrice); setVal("quoteDropboxFolder",q.folderPath);
+  setVal("quoteFolderPath",q.folderPath); setVal("quoteOrderNumber",q.orderNumber);
+  setVal("quoteSiteAddress",q.siteAddress); setVal("quoteEmailAddress",q.contactEmail);
+  if(el("quoteOwnerSelect")) el("quoteOwnerSelect").value=q.owner||q.preparedBy||"Wayne Bonney";
+  if(el("quotePreparedBy")) el("quotePreparedBy").value=q.owner||q.preparedBy||"Wayne Bonney";
+  if(el("quoteTypeSelect")) el("quoteTypeSelect").value=q.quoteType||"standard";
+  try{
+    if(el("quoteCustomer") && Array.isArray(customers)){
+      const customer=customers.find(c=>String(c.name||"")===String(q.customer||""));
+      if(customer){
+        el("quoteCustomer").value=String(customer.id);
+        if(typeof populateQuoteSite==="function") populateQuoteSite();
+        const site=(customer.sites||[]).find(s=>String(s.name||"")===String(q.site||""));
+        if(site && el("quoteSite")) el("quoteSite").value=String(site.id);
+      }
+    }
+  }catch(e){}
+  try{syncQuoteOwnerDetails();}catch(e){}
+  try{renderQuotePreview();}catch(e){}
+  try{showTab("quoteprint");}catch(e){}
+  if(el("quoteStorageMessage")) el("quoteStorageMessage").textContent=`Loaded ${q.quoteRef||"quote"}.`;
 }
-
 function createQuoteRevision(){
-  const base = typeof saveQuoteToRegister === "function" ? saveQuoteToRegister() : collectQuoteStorageData();
-  const list = loadQuoteRegister();
-  const parentId = base.parentId || base.id;
-  const revs = list.filter(x=>x.parentId===parentId || x.id===parentId).map(x=>Number(x.revision||0));
-  const nextRev = Math.max(0, ...revs) + 1;
-
-  const rev = {...base};
-  rev.id = typeof makeQuoteId === "function" ? makeQuoteId() : ("Q-" + Date.now());
-  rev.parentId = parentId;
-  rev.revision = nextRev;
-  rev.status = "Draft";
-  rev.quoteRef = cleanRevisionRef(base.quoteRef, nextRev);
-  rev.createdAt = new Date().toISOString();
-  rev.updatedAt = new Date().toISOString();
-
-  list.unshift(rev);
-  saveQuoteRegister(list);
-  currentStoredQuoteId = rev.id;
-
-  if(el("quoteRef")) el("quoteRef").value = rev.quoteRef;
-  renderQuoteStorageList();
-  if(el("quoteStorageMessage")) el("quoteStorageMessage").textContent = `Created ${rev.quoteRef}.`;
+  const base=typeof saveQuoteToRegister==="function" ? saveQuoteToRegister() : collectQuoteStorageData();
+  const list=loadQuoteRegister();
+  const baseRef=cleanRevisionRef(base.quoteRef||el("quoteRef")?.value||"Quote");
+  const parentId=base.parentId||base.id;
+  const revs=list.filter(x=>x.parentId===parentId||x.id===parentId).map(x=>Number(x.revision||0));
+  const nextRev=Math.max(0,...revs)+1;
+  const rev={...base,id:(typeof makeQuoteId==="function"?makeQuoteId():"Q-"+Date.now()),parentId,revision:nextRev,status:"Draft",quoteRef:`${baseRef} Rev ${nextRev}`,updatedAt:new Date().toISOString(),createdAt:new Date().toISOString()};
+  list.unshift(rev); saveQuoteRegister(list); currentStoredQuoteId=rev.id;
+  if(el("quoteRef")) el("quoteRef").value=rev.quoteRef;
+  renderQuoteStorageList(); try{renderQuotePreview();}catch(e){}
 }
-
-function createQuoteRevisionFromId(id){
-  loadStoredQuote(id);
-  setTimeout(createQuoteRevision, 50);
-}
-
-function setQuoteStatusById(id,status){
-  const list = loadQuoteRegister();
-  const idx = list.findIndex(q=>String(q.id)===String(id));
-  if(idx<0) return;
-  list[idx].status = status;
-  list[idx].updatedAt = new Date().toISOString();
-  saveQuoteRegister(list);
-  renderQuoteStorageList();
-}
-
 function renderQuoteStorageList(){
-  const box = el("quoteStorageList");
-  if(!box || typeof loadQuoteRegister !== "function") return;
-
-  populateQuoteSiteFilter();
-
-  const term = String(el("quoteRegisterSearch")?.value || "").toLowerCase();
-  const status = el("quoteRegisterStatus")?.value || "";
-  const owner = el("quoteRegisterOwnerFilter")?.value || "";
-  const site = el("quoteRegisterSiteFilter")?.value || "";
-
-  const list = loadQuoteRegister().filter(q=>{
-    const hay = [q.quoteRef,q.customer,q.site,q.project,q.owner,q.status].join(" ").toLowerCase();
-    return (!term || hay.includes(term))
-      && (!status || q.status === status)
-      && (!owner || quoteOwnerInitials(q) === owner)
-      && (!site || q.site === site);
+  ensureQuoteRegisterFilterControls(); populateQuoteRegisterSiteFilter();
+  const box=el("quoteStorageList"); if(!box) return;
+  const term=String(el("quoteRegisterSearch")?.value||"").toLowerCase();
+  const status=el("quoteRegisterStatus")?.value||"";
+  const owner=el("quoteRegisterOwnerFilter")?.value||"";
+  const siteFilter=el("quoteRegisterSiteFilter")?.value||"";
+  const list=loadQuoteRegister().filter(q=>{
+    const hay=[q.quoteRef,q.customer,q.site,q.project,q.projectTitle,q.owner,q.status].join(" ").toLowerCase();
+    return (!term||hay.includes(term)) && (!status||q.status===status) && (!owner||ownerInitialsFromQuote(q)===owner) && (!siteFilter||q.site===siteFilter);
   });
-
-  box.innerHTML = list.length ? list.map(q=>{
-    const displayRef = cleanRevisionRef(q.quoteRef, q.revision);
-    const net = (typeof moneyFmt==="function") ? moneyFmt(q.netPrice||0) : ("£"+Number(q.netPrice||0).toFixed(2));
-    return `<div class="quoteStorageItem">
-      <div>
-        <strong>${safe(displayRef)} <span class="quoteStatusBadge">${safe(q.status||"Draft")}</span></strong>
-        <small>${safe(q.customer||"")} — ${safe(q.site||"")} — ${safe(q.project||"")}<br>
-        ${safe(q.owner||"")} / ${quoteOwnerInitials(q)} / Net ${net} / Updated ${q.updatedAt ? new Date(q.updatedAt).toLocaleString("en-GB") : ""}<br>
-        Folder: ${safe(q.folderPath||"Not linked")}</small>
-      </div>
-      <div class="quoteActionRow">
-        <button class="btn2" onclick="loadStoredQuote('${q.id}')">Load</button>
-        <button class="btn2" onclick="createQuoteRevisionFromId('${q.id}')">Amend / Revise</button>
-        <button class="btn2" onclick="setQuoteStatusById('${q.id}','Sent')">Sent</button>
-        <button class="btnGreen" onclick="setQuoteStatusById('${q.id}','Accepted')">Accepted</button>
-        <button class="btnRed" onclick="setQuoteStatusById('${q.id}','Rejected')">Rejected</button>
-        <button class="btnRed" onclick="deleteStoredQuote('${q.id}')">Delete</button>
-      </div>
-    </div>`;
-  }).join("") : `<p class="muted small" style="padding:12px">No saved quotes found.</p>`;
+  box.innerHTML=list.length?list.map(q=>{
+    const ref=cleanRevisionRef(q.quoteRef||"Quote")+(Number(q.revision||0)?` Rev ${q.revision}`:"");
+    return `<div class="quoteStorageItem"><div><strong>${safe(ref)} <span class="quoteStatusBadge">${safe(q.status||"Draft")}</span></strong><small>${safe(q.customer||"")} — ${safe(q.site||"")} — ${safe(q.project||q.projectTitle||"")}<br>${safe(q.owner||q.preparedBy||"")} / Net ${(typeof moneyFmt==="function"?moneyFmt(q.netPrice||0):"£"+Number(q.netPrice||0).toFixed(2))} / Updated ${q.updatedAt?new Date(q.updatedAt).toLocaleString("en-GB"):""}<br>Folder: ${safe(q.folderPath||"Not linked")}</small></div><div class="quoteActionRow"><button class="btn2" onclick="loadStoredQuote('${q.id}')">Load</button><button class="btn2" onclick="currentStoredQuoteId='${q.id}';createQuoteRevision()">Amend / Revise</button><button class="btn2" onclick="currentStoredQuoteId='${q.id}';setStoredQuoteStatus('Sent')">Sent</button><button class="btnGreen" onclick="currentStoredQuoteId='${q.id}';setStoredQuoteStatus('Accepted')">Accepted</button><button class="btnRed" onclick="currentStoredQuoteId='${q.id}';setStoredQuoteStatus('Rejected')">Rejected</button><button class="btnRed" onclick="deleteStoredQuote('${q.id}')">Delete</button></div></div>`;
+  }).join(""):`<p class="muted small" style="padding:12px">No saved quotes yet.</p>`;
 }
-
+function openQuoteEmail(){
+  try{if(typeof saveCurrentQuote==="function") saveCurrentQuote("Sent"); if(typeof saveQuoteToRegister==="function") saveQuoteToRegister("Sent");}catch(e){}
+  const to=(typeof quoteEmailRecipient==="function")?quoteEmailRecipient():(el("quoteEmailAddress")?.value||"");
+  const ref=el("quoteRef")?.value||"Quotation";
+  const subject=encodeURIComponent(`WGE Quotation ${ref}`);
+  const body=encodeURIComponent((typeof buildQuoteEmailBody==="function")?buildQuoteEmailBody():"Please find attached our quotation.\n\nKind regards");
+  window.location.href=`mailto:${encodeURIComponent(to)}?subject=${subject}&body=${body}`;
+}
 function wireQuoteStorageButtons(){
   if(el("saveQuoteRegisterBtn")) el("saveQuoteRegisterBtn").onclick=()=>saveQuoteToRegister();
   if(el("saveQuotePackBtn")) el("saveQuotePackBtn").onclick=()=>exportQuotePack();
@@ -4890,18 +4911,7 @@ function wireQuoteStorageButtons(){
   if(el("markLostBtn")) el("markLostBtn").onclick=()=>setStoredQuoteStatus("Lost");
   if(el("quoteRegisterSearch")) el("quoteRegisterSearch").oninput=renderQuoteStorageList;
   if(el("quoteRegisterStatus")) el("quoteRegisterStatus").onchange=renderQuoteStorageList;
-  if(el("quoteRegisterOwnerFilter")) el("quoteRegisterOwnerFilter").onchange=renderQuoteStorageList;
-  if(el("quoteRegisterSiteFilter")) el("quoteRegisterSiteFilter").onchange=renderQuoteStorageList;
-}
-
-function openQuoteEmail(){
-  try{ saveCurrentQuote("Sent"); }catch(e){}
-  try{ saveQuoteToRegister("Sent"); }catch(e){}
-  const to = (typeof quoteEmailRecipient==="function") ? quoteEmailRecipient() : (el("quoteEmailAddress")?.value||"");
-  const ref = el("quoteRef")?.value || "Quotation";
-  const subject = encodeURIComponent(`WGE Quotation ${ref}`);
-  const body = encodeURIComponent((typeof buildQuoteEmailBody==="function") ? buildQuoteEmailBody() : "Please find attached our quotation.");
-  window.location.href = `mailto:${encodeURIComponent(to)}?subject=${subject}&body=${body}`;
+  ensureQuoteRegisterFilterControls();
 }
 
 document.addEventListener("DOMContentLoaded",()=>{loadAll();seedIfEmpty();document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));document.querySelectorAll("[data-user]").forEach(b=>b.addEventListener("click",()=>{currentUser=b.dataset.user;el("currentUserLabel").textContent=currentUser==="DG"?"David Job Schedule":currentUser==="MASTER"?"Master View":"Wayne Job Schedule";initialiseQuoteEnquiry();if(el("saveQuoteBtn"))el("saveQuoteBtn").addEventListener("click",()=>saveCurrentQuote());
@@ -4943,7 +4953,7 @@ if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{tr
 if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
 if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
 if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();wireQuoteStorageButtons();renderQuoteStorageList();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
+syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
 if(el("quoteContact"))el("quoteContact").addEventListener("change",()=>{populateQuoteContacts();renderQuotePreview()});el("jobCustomer").addEventListener("change",populateJobSite);el("jobOwner").addEventListener("change",renderJobs);el("addCustomerBtn").addEventListener("click",addCustomer);if(el("seedDefaultCustomersBtn"))el("seedDefaultCustomersBtn").addEventListener("click",seedWGEDefaultCustomers);el("addSiteBtn").addEventListener("click",addSite);if(el("addSiteContactBtn"))el("addSiteContactBtn").addEventListener("click",addSiteContact);
 if(el("deleteSiteBtn"))el("deleteSiteBtn").addEventListener("click",deleteSelectedSite);
 if(el("deleteCustomerBtn"))el("deleteCustomerBtn").addEventListener("click",deleteSelectedCustomer);if(el("selectJobFolderBtn"))el("selectJobFolderBtn").addEventListener("click",selectJobFolder);
@@ -4997,7 +5007,7 @@ if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{tr
 if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
 if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
 if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();wireQuoteStorageButtons();renderQuoteStorageList();renderAll()})
+syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();renderAll()})
 </script>
 
 <script>
@@ -6531,6 +6541,111 @@ async function convertQuoteToJob(){
     const latest = Array.isArray(jobs) ? jobs[0] : null;
     if(latest) await upsertLiveJobToSupabase(latest);
   }catch(e){console.warn(e)}
+}
+
+
+/* QUOTE REGISTER LOAD / REVISION / FILTER FIX */
+function cleanRevisionRef(ref){return String(ref||"").replace(/\s+Rev(?:ision)?\s+\d+$/i,"").trim();}
+function ownerInitialsFromQuote(q){
+  const ref=String(q.quoteRef||"");
+  if(ref.startsWith("WB")) return "WB";
+  if(ref.startsWith("DG")) return "DG";
+  const owner=String(q.owner||q.preparedBy||"").toLowerCase();
+  return owner.includes("david") ? "DG" : "WB";
+}
+function ensureQuoteRegisterFilterControls(){
+  const panel=document.querySelector(".quoteStorageControls") || document.querySelector("#quoteRegisterSearch")?.closest(".card,div");
+  if(!panel || document.getElementById("quoteRegisterOwnerFilter")) return;
+  const wrap=document.createElement("div");
+  wrap.className="quoteRegisterExtraFilters";
+  wrap.innerHTML=`<div><label>Owner</label><select id="quoteRegisterOwnerFilter"><option value="">All</option><option value="WB">WB - Wayne</option><option value="DG">DG - David</option></select></div><div><label>Site</label><select id="quoteRegisterSiteFilter"><option value="">All sites</option></select></div>`;
+  panel.insertAdjacentElement("afterend",wrap);
+  document.getElementById("quoteRegisterOwnerFilter").addEventListener("change",renderQuoteStorageList);
+  document.getElementById("quoteRegisterSiteFilter").addEventListener("change",renderQuoteStorageList);
+}
+function populateQuoteRegisterSiteFilter(){
+  const select=document.getElementById("quoteRegisterSiteFilter");
+  if(!select || typeof loadQuoteRegister!=="function") return;
+  const current=select.value;
+  const sites=[...new Set(loadQuoteRegister().map(q=>q.site).filter(Boolean))].sort();
+  select.innerHTML=`<option value="">All sites</option>`+sites.map(s=>`<option value="${safe(s)}">${safe(s)}</option>`).join("");
+  if(current && sites.includes(current)) select.value=current;
+}
+function loadStoredQuote(id){
+  const q=loadQuoteRegister().find(x=>String(x.id)===String(id));
+  if(!q) return alert("Quote not found.");
+  currentStoredQuoteId=q.id;
+  const setVal=(id,val)=>{const x=el(id); if(x) x.value=val ?? "";};
+  setVal("quoteRef",q.quoteRef); setVal("quoteProjectTitle",q.project||q.projectTitle);
+  setVal("quoteEnquiry",q.enquiry); setVal("quoteRoughScope",q.roughScope);
+  setVal("quoteScope",q.polishedScope||q.scope); setVal("quoteAssumptions",q.assumptions);
+  setVal("quoteNetPrice",q.netPrice); setVal("quoteDropboxFolder",q.folderPath);
+  setVal("quoteFolderPath",q.folderPath); setVal("quoteOrderNumber",q.orderNumber);
+  setVal("quoteSiteAddress",q.siteAddress); setVal("quoteEmailAddress",q.contactEmail);
+  if(el("quoteOwnerSelect")) el("quoteOwnerSelect").value=q.owner||q.preparedBy||"Wayne Bonney";
+  if(el("quotePreparedBy")) el("quotePreparedBy").value=q.owner||q.preparedBy||"Wayne Bonney";
+  if(el("quoteTypeSelect")) el("quoteTypeSelect").value=q.quoteType||"standard";
+  try{
+    if(el("quoteCustomer") && Array.isArray(customers)){
+      const customer=customers.find(c=>String(c.name||"")===String(q.customer||""));
+      if(customer){
+        el("quoteCustomer").value=String(customer.id);
+        if(typeof populateQuoteSite==="function") populateQuoteSite();
+        const site=(customer.sites||[]).find(s=>String(s.name||"")===String(q.site||""));
+        if(site && el("quoteSite")) el("quoteSite").value=String(site.id);
+      }
+    }
+  }catch(e){}
+  try{syncQuoteOwnerDetails();}catch(e){}
+  try{renderQuotePreview();}catch(e){}
+  try{showTab("quoteprint");}catch(e){}
+  if(el("quoteStorageMessage")) el("quoteStorageMessage").textContent=`Loaded ${q.quoteRef||"quote"}.`;
+}
+function createQuoteRevision(){
+  const base=typeof saveQuoteToRegister==="function" ? saveQuoteToRegister() : collectQuoteStorageData();
+  const list=loadQuoteRegister();
+  const baseRef=cleanRevisionRef(base.quoteRef||el("quoteRef")?.value||"Quote");
+  const parentId=base.parentId||base.id;
+  const revs=list.filter(x=>x.parentId===parentId||x.id===parentId).map(x=>Number(x.revision||0));
+  const nextRev=Math.max(0,...revs)+1;
+  const rev={...base,id:(typeof makeQuoteId==="function"?makeQuoteId():"Q-"+Date.now()),parentId,revision:nextRev,status:"Draft",quoteRef:`${baseRef} Rev ${nextRev}`,updatedAt:new Date().toISOString(),createdAt:new Date().toISOString()};
+  list.unshift(rev); saveQuoteRegister(list); currentStoredQuoteId=rev.id;
+  if(el("quoteRef")) el("quoteRef").value=rev.quoteRef;
+  renderQuoteStorageList(); try{renderQuotePreview();}catch(e){}
+}
+function renderQuoteStorageList(){
+  ensureQuoteRegisterFilterControls(); populateQuoteRegisterSiteFilter();
+  const box=el("quoteStorageList"); if(!box) return;
+  const term=String(el("quoteRegisterSearch")?.value||"").toLowerCase();
+  const status=el("quoteRegisterStatus")?.value||"";
+  const owner=el("quoteRegisterOwnerFilter")?.value||"";
+  const siteFilter=el("quoteRegisterSiteFilter")?.value||"";
+  const list=loadQuoteRegister().filter(q=>{
+    const hay=[q.quoteRef,q.customer,q.site,q.project,q.projectTitle,q.owner,q.status].join(" ").toLowerCase();
+    return (!term||hay.includes(term)) && (!status||q.status===status) && (!owner||ownerInitialsFromQuote(q)===owner) && (!siteFilter||q.site===siteFilter);
+  });
+  box.innerHTML=list.length?list.map(q=>{
+    const ref=cleanRevisionRef(q.quoteRef||"Quote")+(Number(q.revision||0)?` Rev ${q.revision}`:"");
+    return `<div class="quoteStorageItem"><div><strong>${safe(ref)} <span class="quoteStatusBadge">${safe(q.status||"Draft")}</span></strong><small>${safe(q.customer||"")} — ${safe(q.site||"")} — ${safe(q.project||q.projectTitle||"")}<br>${safe(q.owner||q.preparedBy||"")} / Net ${(typeof moneyFmt==="function"?moneyFmt(q.netPrice||0):"£"+Number(q.netPrice||0).toFixed(2))} / Updated ${q.updatedAt?new Date(q.updatedAt).toLocaleString("en-GB"):""}<br>Folder: ${safe(q.folderPath||"Not linked")}</small></div><div class="quoteActionRow"><button class="btn2" onclick="loadStoredQuote('${q.id}')">Load</button><button class="btn2" onclick="currentStoredQuoteId='${q.id}';createQuoteRevision()">Amend / Revise</button><button class="btn2" onclick="currentStoredQuoteId='${q.id}';setStoredQuoteStatus('Sent')">Sent</button><button class="btnGreen" onclick="currentStoredQuoteId='${q.id}';setStoredQuoteStatus('Accepted')">Accepted</button><button class="btnRed" onclick="currentStoredQuoteId='${q.id}';setStoredQuoteStatus('Rejected')">Rejected</button><button class="btnRed" onclick="deleteStoredQuote('${q.id}')">Delete</button></div></div>`;
+  }).join(""):`<p class="muted small" style="padding:12px">No saved quotes yet.</p>`;
+}
+function openQuoteEmail(){
+  try{if(typeof saveCurrentQuote==="function") saveCurrentQuote("Sent"); if(typeof saveQuoteToRegister==="function") saveQuoteToRegister("Sent");}catch(e){}
+  const to=(typeof quoteEmailRecipient==="function")?quoteEmailRecipient():(el("quoteEmailAddress")?.value||"");
+  const ref=el("quoteRef")?.value||"Quotation";
+  const subject=encodeURIComponent(`WGE Quotation ${ref}`);
+  const body=encodeURIComponent((typeof buildQuoteEmailBody==="function")?buildQuoteEmailBody():"Please find attached our quotation.\n\nKind regards");
+  window.location.href=`mailto:${encodeURIComponent(to)}?subject=${subject}&body=${body}`;
+}
+function wireQuoteStorageButtons(){
+  if(el("saveQuoteRegisterBtn")) el("saveQuoteRegisterBtn").onclick=()=>saveQuoteToRegister();
+  if(el("saveQuotePackBtn")) el("saveQuotePackBtn").onclick=()=>exportQuotePack();
+  if(el("createRevisionBtn")) el("createRevisionBtn").onclick=()=>createQuoteRevision();
+  if(el("markAcceptedBtn")) el("markAcceptedBtn").onclick=()=>setStoredQuoteStatus("Accepted");
+  if(el("markLostBtn")) el("markLostBtn").onclick=()=>setStoredQuoteStatus("Lost");
+  if(el("quoteRegisterSearch")) el("quoteRegisterSearch").oninput=renderQuoteStorageList;
+  if(el("quoteRegisterStatus")) el("quoteRegisterStatus").onchange=renderQuoteStorageList;
+  ensureQuoteRegisterFilterControls();
 }
 
 document.addEventListener("DOMContentLoaded", function(){
@@ -8091,6 +8206,111 @@ async function convertQuoteToJob(){
   }catch(e){console.warn(e)}
 }
 
+
+/* QUOTE REGISTER LOAD / REVISION / FILTER FIX */
+function cleanRevisionRef(ref){return String(ref||"").replace(/\s+Rev(?:ision)?\s+\d+$/i,"").trim();}
+function ownerInitialsFromQuote(q){
+  const ref=String(q.quoteRef||"");
+  if(ref.startsWith("WB")) return "WB";
+  if(ref.startsWith("DG")) return "DG";
+  const owner=String(q.owner||q.preparedBy||"").toLowerCase();
+  return owner.includes("david") ? "DG" : "WB";
+}
+function ensureQuoteRegisterFilterControls(){
+  const panel=document.querySelector(".quoteStorageControls") || document.querySelector("#quoteRegisterSearch")?.closest(".card,div");
+  if(!panel || document.getElementById("quoteRegisterOwnerFilter")) return;
+  const wrap=document.createElement("div");
+  wrap.className="quoteRegisterExtraFilters";
+  wrap.innerHTML=`<div><label>Owner</label><select id="quoteRegisterOwnerFilter"><option value="">All</option><option value="WB">WB - Wayne</option><option value="DG">DG - David</option></select></div><div><label>Site</label><select id="quoteRegisterSiteFilter"><option value="">All sites</option></select></div>`;
+  panel.insertAdjacentElement("afterend",wrap);
+  document.getElementById("quoteRegisterOwnerFilter").addEventListener("change",renderQuoteStorageList);
+  document.getElementById("quoteRegisterSiteFilter").addEventListener("change",renderQuoteStorageList);
+}
+function populateQuoteRegisterSiteFilter(){
+  const select=document.getElementById("quoteRegisterSiteFilter");
+  if(!select || typeof loadQuoteRegister!=="function") return;
+  const current=select.value;
+  const sites=[...new Set(loadQuoteRegister().map(q=>q.site).filter(Boolean))].sort();
+  select.innerHTML=`<option value="">All sites</option>`+sites.map(s=>`<option value="${safe(s)}">${safe(s)}</option>`).join("");
+  if(current && sites.includes(current)) select.value=current;
+}
+function loadStoredQuote(id){
+  const q=loadQuoteRegister().find(x=>String(x.id)===String(id));
+  if(!q) return alert("Quote not found.");
+  currentStoredQuoteId=q.id;
+  const setVal=(id,val)=>{const x=el(id); if(x) x.value=val ?? "";};
+  setVal("quoteRef",q.quoteRef); setVal("quoteProjectTitle",q.project||q.projectTitle);
+  setVal("quoteEnquiry",q.enquiry); setVal("quoteRoughScope",q.roughScope);
+  setVal("quoteScope",q.polishedScope||q.scope); setVal("quoteAssumptions",q.assumptions);
+  setVal("quoteNetPrice",q.netPrice); setVal("quoteDropboxFolder",q.folderPath);
+  setVal("quoteFolderPath",q.folderPath); setVal("quoteOrderNumber",q.orderNumber);
+  setVal("quoteSiteAddress",q.siteAddress); setVal("quoteEmailAddress",q.contactEmail);
+  if(el("quoteOwnerSelect")) el("quoteOwnerSelect").value=q.owner||q.preparedBy||"Wayne Bonney";
+  if(el("quotePreparedBy")) el("quotePreparedBy").value=q.owner||q.preparedBy||"Wayne Bonney";
+  if(el("quoteTypeSelect")) el("quoteTypeSelect").value=q.quoteType||"standard";
+  try{
+    if(el("quoteCustomer") && Array.isArray(customers)){
+      const customer=customers.find(c=>String(c.name||"")===String(q.customer||""));
+      if(customer){
+        el("quoteCustomer").value=String(customer.id);
+        if(typeof populateQuoteSite==="function") populateQuoteSite();
+        const site=(customer.sites||[]).find(s=>String(s.name||"")===String(q.site||""));
+        if(site && el("quoteSite")) el("quoteSite").value=String(site.id);
+      }
+    }
+  }catch(e){}
+  try{syncQuoteOwnerDetails();}catch(e){}
+  try{renderQuotePreview();}catch(e){}
+  try{showTab("quoteprint");}catch(e){}
+  if(el("quoteStorageMessage")) el("quoteStorageMessage").textContent=`Loaded ${q.quoteRef||"quote"}.`;
+}
+function createQuoteRevision(){
+  const base=typeof saveQuoteToRegister==="function" ? saveQuoteToRegister() : collectQuoteStorageData();
+  const list=loadQuoteRegister();
+  const baseRef=cleanRevisionRef(base.quoteRef||el("quoteRef")?.value||"Quote");
+  const parentId=base.parentId||base.id;
+  const revs=list.filter(x=>x.parentId===parentId||x.id===parentId).map(x=>Number(x.revision||0));
+  const nextRev=Math.max(0,...revs)+1;
+  const rev={...base,id:(typeof makeQuoteId==="function"?makeQuoteId():"Q-"+Date.now()),parentId,revision:nextRev,status:"Draft",quoteRef:`${baseRef} Rev ${nextRev}`,updatedAt:new Date().toISOString(),createdAt:new Date().toISOString()};
+  list.unshift(rev); saveQuoteRegister(list); currentStoredQuoteId=rev.id;
+  if(el("quoteRef")) el("quoteRef").value=rev.quoteRef;
+  renderQuoteStorageList(); try{renderQuotePreview();}catch(e){}
+}
+function renderQuoteStorageList(){
+  ensureQuoteRegisterFilterControls(); populateQuoteRegisterSiteFilter();
+  const box=el("quoteStorageList"); if(!box) return;
+  const term=String(el("quoteRegisterSearch")?.value||"").toLowerCase();
+  const status=el("quoteRegisterStatus")?.value||"";
+  const owner=el("quoteRegisterOwnerFilter")?.value||"";
+  const siteFilter=el("quoteRegisterSiteFilter")?.value||"";
+  const list=loadQuoteRegister().filter(q=>{
+    const hay=[q.quoteRef,q.customer,q.site,q.project,q.projectTitle,q.owner,q.status].join(" ").toLowerCase();
+    return (!term||hay.includes(term)) && (!status||q.status===status) && (!owner||ownerInitialsFromQuote(q)===owner) && (!siteFilter||q.site===siteFilter);
+  });
+  box.innerHTML=list.length?list.map(q=>{
+    const ref=cleanRevisionRef(q.quoteRef||"Quote")+(Number(q.revision||0)?` Rev ${q.revision}`:"");
+    return `<div class="quoteStorageItem"><div><strong>${safe(ref)} <span class="quoteStatusBadge">${safe(q.status||"Draft")}</span></strong><small>${safe(q.customer||"")} — ${safe(q.site||"")} — ${safe(q.project||q.projectTitle||"")}<br>${safe(q.owner||q.preparedBy||"")} / Net ${(typeof moneyFmt==="function"?moneyFmt(q.netPrice||0):"£"+Number(q.netPrice||0).toFixed(2))} / Updated ${q.updatedAt?new Date(q.updatedAt).toLocaleString("en-GB"):""}<br>Folder: ${safe(q.folderPath||"Not linked")}</small></div><div class="quoteActionRow"><button class="btn2" onclick="loadStoredQuote('${q.id}')">Load</button><button class="btn2" onclick="currentStoredQuoteId='${q.id}';createQuoteRevision()">Amend / Revise</button><button class="btn2" onclick="currentStoredQuoteId='${q.id}';setStoredQuoteStatus('Sent')">Sent</button><button class="btnGreen" onclick="currentStoredQuoteId='${q.id}';setStoredQuoteStatus('Accepted')">Accepted</button><button class="btnRed" onclick="currentStoredQuoteId='${q.id}';setStoredQuoteStatus('Rejected')">Rejected</button><button class="btnRed" onclick="deleteStoredQuote('${q.id}')">Delete</button></div></div>`;
+  }).join(""):`<p class="muted small" style="padding:12px">No saved quotes yet.</p>`;
+}
+function openQuoteEmail(){
+  try{if(typeof saveCurrentQuote==="function") saveCurrentQuote("Sent"); if(typeof saveQuoteToRegister==="function") saveQuoteToRegister("Sent");}catch(e){}
+  const to=(typeof quoteEmailRecipient==="function")?quoteEmailRecipient():(el("quoteEmailAddress")?.value||"");
+  const ref=el("quoteRef")?.value||"Quotation";
+  const subject=encodeURIComponent(`WGE Quotation ${ref}`);
+  const body=encodeURIComponent((typeof buildQuoteEmailBody==="function")?buildQuoteEmailBody():"Please find attached our quotation.\n\nKind regards");
+  window.location.href=`mailto:${encodeURIComponent(to)}?subject=${subject}&body=${body}`;
+}
+function wireQuoteStorageButtons(){
+  if(el("saveQuoteRegisterBtn")) el("saveQuoteRegisterBtn").onclick=()=>saveQuoteToRegister();
+  if(el("saveQuotePackBtn")) el("saveQuotePackBtn").onclick=()=>exportQuotePack();
+  if(el("createRevisionBtn")) el("createRevisionBtn").onclick=()=>createQuoteRevision();
+  if(el("markAcceptedBtn")) el("markAcceptedBtn").onclick=()=>setStoredQuoteStatus("Accepted");
+  if(el("markLostBtn")) el("markLostBtn").onclick=()=>setStoredQuoteStatus("Lost");
+  if(el("quoteRegisterSearch")) el("quoteRegisterSearch").oninput=renderQuoteStorageList;
+  if(el("quoteRegisterStatus")) el("quoteRegisterStatus").onchange=renderQuoteStorageList;
+  ensureQuoteRegisterFilterControls();
+}
+
 document.addEventListener("DOMContentLoaded", function(){
     document.querySelectorAll(".tab").forEach(btn=>{
       btn.onclick = function(e){
@@ -9641,6 +9861,111 @@ async function convertQuoteToJob(){
     const latest = Array.isArray(jobs) ? jobs[0] : null;
     if(latest) await upsertLiveJobToSupabase(latest);
   }catch(e){console.warn(e)}
+}
+
+
+/* QUOTE REGISTER LOAD / REVISION / FILTER FIX */
+function cleanRevisionRef(ref){return String(ref||"").replace(/\s+Rev(?:ision)?\s+\d+$/i,"").trim();}
+function ownerInitialsFromQuote(q){
+  const ref=String(q.quoteRef||"");
+  if(ref.startsWith("WB")) return "WB";
+  if(ref.startsWith("DG")) return "DG";
+  const owner=String(q.owner||q.preparedBy||"").toLowerCase();
+  return owner.includes("david") ? "DG" : "WB";
+}
+function ensureQuoteRegisterFilterControls(){
+  const panel=document.querySelector(".quoteStorageControls") || document.querySelector("#quoteRegisterSearch")?.closest(".card,div");
+  if(!panel || document.getElementById("quoteRegisterOwnerFilter")) return;
+  const wrap=document.createElement("div");
+  wrap.className="quoteRegisterExtraFilters";
+  wrap.innerHTML=`<div><label>Owner</label><select id="quoteRegisterOwnerFilter"><option value="">All</option><option value="WB">WB - Wayne</option><option value="DG">DG - David</option></select></div><div><label>Site</label><select id="quoteRegisterSiteFilter"><option value="">All sites</option></select></div>`;
+  panel.insertAdjacentElement("afterend",wrap);
+  document.getElementById("quoteRegisterOwnerFilter").addEventListener("change",renderQuoteStorageList);
+  document.getElementById("quoteRegisterSiteFilter").addEventListener("change",renderQuoteStorageList);
+}
+function populateQuoteRegisterSiteFilter(){
+  const select=document.getElementById("quoteRegisterSiteFilter");
+  if(!select || typeof loadQuoteRegister!=="function") return;
+  const current=select.value;
+  const sites=[...new Set(loadQuoteRegister().map(q=>q.site).filter(Boolean))].sort();
+  select.innerHTML=`<option value="">All sites</option>`+sites.map(s=>`<option value="${safe(s)}">${safe(s)}</option>`).join("");
+  if(current && sites.includes(current)) select.value=current;
+}
+function loadStoredQuote(id){
+  const q=loadQuoteRegister().find(x=>String(x.id)===String(id));
+  if(!q) return alert("Quote not found.");
+  currentStoredQuoteId=q.id;
+  const setVal=(id,val)=>{const x=el(id); if(x) x.value=val ?? "";};
+  setVal("quoteRef",q.quoteRef); setVal("quoteProjectTitle",q.project||q.projectTitle);
+  setVal("quoteEnquiry",q.enquiry); setVal("quoteRoughScope",q.roughScope);
+  setVal("quoteScope",q.polishedScope||q.scope); setVal("quoteAssumptions",q.assumptions);
+  setVal("quoteNetPrice",q.netPrice); setVal("quoteDropboxFolder",q.folderPath);
+  setVal("quoteFolderPath",q.folderPath); setVal("quoteOrderNumber",q.orderNumber);
+  setVal("quoteSiteAddress",q.siteAddress); setVal("quoteEmailAddress",q.contactEmail);
+  if(el("quoteOwnerSelect")) el("quoteOwnerSelect").value=q.owner||q.preparedBy||"Wayne Bonney";
+  if(el("quotePreparedBy")) el("quotePreparedBy").value=q.owner||q.preparedBy||"Wayne Bonney";
+  if(el("quoteTypeSelect")) el("quoteTypeSelect").value=q.quoteType||"standard";
+  try{
+    if(el("quoteCustomer") && Array.isArray(customers)){
+      const customer=customers.find(c=>String(c.name||"")===String(q.customer||""));
+      if(customer){
+        el("quoteCustomer").value=String(customer.id);
+        if(typeof populateQuoteSite==="function") populateQuoteSite();
+        const site=(customer.sites||[]).find(s=>String(s.name||"")===String(q.site||""));
+        if(site && el("quoteSite")) el("quoteSite").value=String(site.id);
+      }
+    }
+  }catch(e){}
+  try{syncQuoteOwnerDetails();}catch(e){}
+  try{renderQuotePreview();}catch(e){}
+  try{showTab("quoteprint");}catch(e){}
+  if(el("quoteStorageMessage")) el("quoteStorageMessage").textContent=`Loaded ${q.quoteRef||"quote"}.`;
+}
+function createQuoteRevision(){
+  const base=typeof saveQuoteToRegister==="function" ? saveQuoteToRegister() : collectQuoteStorageData();
+  const list=loadQuoteRegister();
+  const baseRef=cleanRevisionRef(base.quoteRef||el("quoteRef")?.value||"Quote");
+  const parentId=base.parentId||base.id;
+  const revs=list.filter(x=>x.parentId===parentId||x.id===parentId).map(x=>Number(x.revision||0));
+  const nextRev=Math.max(0,...revs)+1;
+  const rev={...base,id:(typeof makeQuoteId==="function"?makeQuoteId():"Q-"+Date.now()),parentId,revision:nextRev,status:"Draft",quoteRef:`${baseRef} Rev ${nextRev}`,updatedAt:new Date().toISOString(),createdAt:new Date().toISOString()};
+  list.unshift(rev); saveQuoteRegister(list); currentStoredQuoteId=rev.id;
+  if(el("quoteRef")) el("quoteRef").value=rev.quoteRef;
+  renderQuoteStorageList(); try{renderQuotePreview();}catch(e){}
+}
+function renderQuoteStorageList(){
+  ensureQuoteRegisterFilterControls(); populateQuoteRegisterSiteFilter();
+  const box=el("quoteStorageList"); if(!box) return;
+  const term=String(el("quoteRegisterSearch")?.value||"").toLowerCase();
+  const status=el("quoteRegisterStatus")?.value||"";
+  const owner=el("quoteRegisterOwnerFilter")?.value||"";
+  const siteFilter=el("quoteRegisterSiteFilter")?.value||"";
+  const list=loadQuoteRegister().filter(q=>{
+    const hay=[q.quoteRef,q.customer,q.site,q.project,q.projectTitle,q.owner,q.status].join(" ").toLowerCase();
+    return (!term||hay.includes(term)) && (!status||q.status===status) && (!owner||ownerInitialsFromQuote(q)===owner) && (!siteFilter||q.site===siteFilter);
+  });
+  box.innerHTML=list.length?list.map(q=>{
+    const ref=cleanRevisionRef(q.quoteRef||"Quote")+(Number(q.revision||0)?` Rev ${q.revision}`:"");
+    return `<div class="quoteStorageItem"><div><strong>${safe(ref)} <span class="quoteStatusBadge">${safe(q.status||"Draft")}</span></strong><small>${safe(q.customer||"")} — ${safe(q.site||"")} — ${safe(q.project||q.projectTitle||"")}<br>${safe(q.owner||q.preparedBy||"")} / Net ${(typeof moneyFmt==="function"?moneyFmt(q.netPrice||0):"£"+Number(q.netPrice||0).toFixed(2))} / Updated ${q.updatedAt?new Date(q.updatedAt).toLocaleString("en-GB"):""}<br>Folder: ${safe(q.folderPath||"Not linked")}</small></div><div class="quoteActionRow"><button class="btn2" onclick="loadStoredQuote('${q.id}')">Load</button><button class="btn2" onclick="currentStoredQuoteId='${q.id}';createQuoteRevision()">Amend / Revise</button><button class="btn2" onclick="currentStoredQuoteId='${q.id}';setStoredQuoteStatus('Sent')">Sent</button><button class="btnGreen" onclick="currentStoredQuoteId='${q.id}';setStoredQuoteStatus('Accepted')">Accepted</button><button class="btnRed" onclick="currentStoredQuoteId='${q.id}';setStoredQuoteStatus('Rejected')">Rejected</button><button class="btnRed" onclick="deleteStoredQuote('${q.id}')">Delete</button></div></div>`;
+  }).join(""):`<p class="muted small" style="padding:12px">No saved quotes yet.</p>`;
+}
+function openQuoteEmail(){
+  try{if(typeof saveCurrentQuote==="function") saveCurrentQuote("Sent"); if(typeof saveQuoteToRegister==="function") saveQuoteToRegister("Sent");}catch(e){}
+  const to=(typeof quoteEmailRecipient==="function")?quoteEmailRecipient():(el("quoteEmailAddress")?.value||"");
+  const ref=el("quoteRef")?.value||"Quotation";
+  const subject=encodeURIComponent(`WGE Quotation ${ref}`);
+  const body=encodeURIComponent((typeof buildQuoteEmailBody==="function")?buildQuoteEmailBody():"Please find attached our quotation.\n\nKind regards");
+  window.location.href=`mailto:${encodeURIComponent(to)}?subject=${subject}&body=${body}`;
+}
+function wireQuoteStorageButtons(){
+  if(el("saveQuoteRegisterBtn")) el("saveQuoteRegisterBtn").onclick=()=>saveQuoteToRegister();
+  if(el("saveQuotePackBtn")) el("saveQuotePackBtn").onclick=()=>exportQuotePack();
+  if(el("createRevisionBtn")) el("createRevisionBtn").onclick=()=>createQuoteRevision();
+  if(el("markAcceptedBtn")) el("markAcceptedBtn").onclick=()=>setStoredQuoteStatus("Accepted");
+  if(el("markLostBtn")) el("markLostBtn").onclick=()=>setStoredQuoteStatus("Lost");
+  if(el("quoteRegisterSearch")) el("quoteRegisterSearch").oninput=renderQuoteStorageList;
+  if(el("quoteRegisterStatus")) el("quoteRegisterStatus").onchange=renderQuoteStorageList;
+  ensureQuoteRegisterFilterControls();
 }
 
 document.addEventListener("DOMContentLoaded", function(){
