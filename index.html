@@ -1055,6 +1055,63 @@ z-index:0;
   display:none!important;
 }
 
+
+/* WGE JOB-CENTRIC QUOTE WORKFLOW FINAL */
+.startHerePanel{
+  background:linear-gradient(135deg,#e0f2fe,#f8fafc);
+  border:1px solid #bfdbfe;
+  border-radius:22px;
+  padding:16px;
+  margin-bottom:14px;
+}
+.startHerePanel h2{margin-bottom:6px}
+.workflowCards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:12px;
+  margin-top:12px;
+}
+.workflowCard{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:12px;
+}
+.workflowCard strong{
+  display:block;
+  color:#075985;
+  margin-bottom:4px;
+}
+.activeQuoteStrip{
+  background:#dcfce7;
+  border:1px solid #86efac;
+  color:#166534;
+  border-radius:16px;
+  padding:10px 12px;
+  margin-top:12px;
+  font-weight:900;
+}
+.workspaceMiniNavFinal{
+  background:#f8fafc;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:12px;
+  margin-bottom:14px;
+}
+.workspaceMiniNavFinal .navBtns{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+.raiseQuotePrimary{
+  font-size:17px;
+  padding:14px 18px;
+}
+.hiddenQuoteWorkTab{
+  display:none!important;
+}
+
 </style>
 </head>
 <body>
@@ -1570,29 +1627,37 @@ z-index:0;
 
 
 
-<section id="quoteWorkspace" class="hidden">
-  <div class="card quoteWorkspaceHero">
-    <h2>Raise Quote</h2>
-    <p class="muted small">Start here. Create the quote number first, then the app only opens the quote generator and correct costing sheet for that quote.</p>
 
-    <div class="quoteWorkspaceGrid">
-      <div class="quoteWorkspaceStep">
-        <strong>1. Owner</strong>
+<section id="quoteWorkspace" class="hidden">
+  <div class="card startHerePanel">
+    <h2>Start Here - Start Here - Raise Quote</h2>
+    <p class="muted small">This is the correct start point. A quote number is created first, then you work inside that quote only.</p>
+
+    <div class="workflowCards">
+      <div class="workflowCard">
+        <strong>1. Quote Owner</strong>
+        <label>Raised By</label>
         <select id="workspaceOwner">
           <option value="Wayne Bonney">WB - Wayne Bonney</option>
           <option value="David Guy">DG - David Guy</option>
         </select>
       </div>
-      <div class="quoteWorkspaceStep">
+
+      <div class="workflowCard">
         <strong>2. Customer</strong>
+        <label>Customer</label>
         <select id="workspaceCustomer"></select>
       </div>
-      <div class="quoteWorkspaceStep">
+
+      <div class="workflowCard">
         <strong>3. Site</strong>
+        <label>Site</label>
         <select id="workspaceSite"></select>
       </div>
-      <div class="quoteWorkspaceStep">
-        <strong>4. Quote Type</strong>
+
+      <div class="workflowCard">
+        <strong>4. Costing Type</strong>
+        <label>Auto-selected from customer</label>
         <select id="workspaceQuoteType">
           <option value="standard">Standard Costing</option>
           <option value="ashco">ASHCO Costing</option>
@@ -1601,20 +1666,21 @@ z-index:0;
       </div>
     </div>
 
-    <div class="quoteWorkspaceActions">
-      <button class="btn" id="workspaceCreateQuoteBtn" type="button">Create Quote Number & Open Workspace</button>
-      <button class="btn2" id="workspaceOpenRegisterBtn" type="button">Open Saved Quotes</button>
+    <div style="height:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn raiseQuotePrimary" id="createQuoteNumberBtn" type="button">Create Quote Number & Open Quote</button>
+      <button class="btn2" id="openSavedQuotesBtn" type="button">Open Saved Quotes</button>
     </div>
 
-    <div id="activeQuoteBanner" class="activeQuoteBanner hidden"></div>
+    <div id="activeQuoteStrip" class="activeQuoteStrip hidden"></div>
   </div>
 
   <div class="card">
-    <h2>Saved Quotes / Revisions</h2>
-    <p class="muted small">Load, revise, mark sent/accepted or search old quotes from here.</p>
-    <div id="workspaceQuoteRegisterMount"></div>
+    <h2>Saved Quotes / Quote Register</h2>
+    <p class="muted small">Use this area to load old quotes, revise them, mark sent/accepted, or convert accepted quotes into live jobs.</p>
+    <div id="quoteWorkspaceRegisterHelp" class="muted small">The saved quote register is also available inside the quote generator.</div>
   </div>
 </section>
+
 
 <section id="quoteprint" class="hidden">
 
