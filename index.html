@@ -1150,43 +1150,12 @@ z-index:0;
 }
 
 
-/* REBUILT CUSTOMER DATABASE */
-.customerDbGrid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-  gap:14px;
-}
-.customerDbList{
-  border:1px solid var(--border);
-  border-radius:16px;
-  background:#fff;
-  overflow:hidden;
-}
-.customerDbRow{
-  padding:12px;
-  border-bottom:1px solid var(--border);
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  align-items:center;
-}
+/* SAFE CUSTOMER DB + RAISE QUOTE LINK */
+.customerDbGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.customerDbList{border:1px solid var(--border);border-radius:16px;background:#fff;overflow:hidden}
+.customerDbRow{padding:12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;align-items:center}
 .customerDbRow:last-child{border-bottom:0}
-.customerDbRow strong{display:block}
-.customerDbActions{display:flex;gap:6px;flex-wrap:wrap}
-.customerDbActions button{padding:7px 9px;font-size:13px}
 .customerDbSmall{font-size:13px;color:var(--muted)}
-
-
-/* FIX RAISE QUOTE DROPDOWN LINK + BUTTON SPACING */
-.startHerePanelActual div[style*="height:14px"],
-.startHerePanelActual div[style*="height:12px"]{
-  height:auto!important;
-  min-height:52px!important;
-  align-items:center!important;
-}
-.startHerePanelActual button{
-  margin-top:8px;
-}
 
 </style>
 </head>
@@ -1291,59 +1260,137 @@ z-index:0;
 <div class="card"><div class="bar"><h2>Job Schedule</h2><button class="btn" id="addJobBtn">Add Job from Form</button></div><div class="grid grid4" style="margin-top:12px"><div><label>Owner</label><select id="jobOwner"><option value="WG">Wayne</option><option value="DG">David</option></select></div><div><label>Job No</label><input id="jobNo" readonly></div><div><label>Customer</label><select id="jobCustomer"></select></div><div><label>Site</label><select id="jobSite"></select></div><div><label>Project</label><input id="jobProject" placeholder="Works description"></div><div><label>Value</label><input id="jobValue" inputmode="decimal" placeholder="£"></div><div><label>PO</label><input id="jobPO"></div><div><label>Status</label><select id="jobStatus"><option>Open</option><option>In Progress</option><option>Ready to Invoice</option><option>Invoiced</option><option>On Hold</option></select></div></div></div><div class="card"><div class="tableWrap"><table><thead><tr><th>Owner</th><th>Job No</th><th>Customer</th><th>Site</th><th>Project</th><th>Value</th><th>Status</th><th>Actions</th></tr></thead><tbody id="jobRows"></tbody></table></div></div></section>
 
 
-
 <section id="customers" class="hidden">
   <div class="card">
-    <h2>Customers & Sites Database</h2>
-    <p class="muted small">Add, edit and manage customers, invoice addresses, sites, site addresses and site contacts. This feeds the quote workflow.</p>
+    <h2>Customers & Sites</h2>
+    <p class="muted small">Add customers once, then add as many sites and contacts as needed. Selecting a customer filters the site dropdown. Selecting a site pulls through the site address and contacts for the quote.</p>
+  </div>
 
-    <div class="customerDbGrid">
+  <div class="grid grid2">
+    <div class="card">
+      <h2>Add New Customer</h2>
+      <label>New Customer Name</label>
+      <input id="customerName" placeholder="e.g. Kensal">
+
+      <label style="margin-top:10px">Invoice Address</label>
+      <textarea id="customerInvoiceAddress" placeholder="Customer invoice/billing address"></textarea>
+
+      <label style="margin-top:10px">Invoice Email Address</label>
+      <input id="customerInvoiceEmail" placeholder="accounts@example.com">
+
+      <label style="margin-top:10px">Notes</label>
+      <textarea id="customerNotes"></textarea>
+
+      <div style="height:10px"></div>
+      <button class="btn" id="addCustomerBtn">Add Customer</button>
+      <button class="btn2" id="seedDefaultCustomersBtn" type="button" style="margin-top:8px">Load WGE Default Customers/Sites</button>
+    </div>
+
+    <div class="card">
+      <h2>Add New Site</h2>
+      <label>Customer Name</label>
+      <select id="siteCustomer"></select>
+
+      <label style="margin-top:10px">New Site Name</label>
+      <input id="siteName" placeholder="e.g. Long Sutton">
+
+      <label style="margin-top:10px">Site Address</label>
+      <textarea id="siteAddressInput" placeholder="Site address for quotes/RAMS"></textarea>
+
+      <label style="margin-top:10px">First Site Contact Name</label>
+      <input id="siteContactName" placeholder="e.g. Sarah">
+
+      <label style="margin-top:10px">First Site Contact Email</label>
+      <input id="siteContactEmail" placeholder="contact@example.com">
+
+      <label style="margin-top:10px">Notes</label>
+      <textarea id="siteNotes"></textarea>
+
+      <div style="height:10px"></div>
+      <button class="btn" id="addSiteBtn">Add Site to Selected Customer</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Select / Edit Existing Customer & Site</h2>
+    <div class="grid grid2">
       <div>
         <label>Customer Name</label>
-        <input id="custName" placeholder="Customer name">
-
-        <label>Invoice Address</label>
-        <textarea id="custInvoiceAddress" placeholder="Invoice address" rows="5"></textarea>
-
-        <label>Accounts / Invoice Email</label>
-        <input id="custInvoiceEmail" placeholder="accounts@example.com">
-
-        <div style="height:10px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn" id="saveCustomerBtn" type="button">Save Customer</button>
-          <button class="btn2" id="clearCustomerBtn" type="button">Clear</button>
-        </div>
+        <select id="manageCustomerSelect"></select>
       </div>
-
       <div>
-        <label>Select Customer</label>
-        <select id="customerDbSelect"></select>
-
         <label>Site Name</label>
-        <input id="siteName" placeholder="Site name">
-
-        <label>Site Address</label>
-        <textarea id="siteAddress" placeholder="Site address" rows="4"></textarea>
-
-        <label>Site Contact Name</label>
-        <input id="siteContactName" placeholder="Contact name">
-
-        <label>Site Contact Email</label>
-        <input id="siteContactEmail" placeholder="contact@example.com">
-
-        <div style="height:10px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn" id="saveSiteBtn" type="button">Save Site / Contact</button>
-          <button class="btn2" id="useSiteOnQuoteBtn" type="button">Use Selected Site on Quote</button>
-        </div>
+        <select id="manageSiteSelect"></select>
       </div>
+    </div>
+
+    <div class="grid grid2" style="margin-top:10px">
+      <div>
+        <label>Edit Customer Name</label>
+        <input id="manageCustomerName">
+      </div>
+      <div>
+        <label>Edit Site Name</label>
+        <input id="manageSiteName">
+      </div>
+    </div>
+
+    <div style="height:10px"></div>
+    <label>Invoice Address</label>
+    <textarea id="manageInvoiceAddress"></textarea>
+
+    <div style="height:10px"></div>
+    <label>Invoice Email Address</label>
+    <input id="manageInvoiceEmail">
+
+    <div style="height:10px"></div>
+    <label>Site Address</label>
+    <textarea id="manageSiteAddress"></textarea>
+
+    <div class="customerLinkPanel">
+      <h3>Site Contacts</h3>
+      <div class="grid grid3">
+        <div><label>Contact Name</label><input id="newSiteContactName" placeholder="Contact name"></div>
+        <div><label>Contact Email</label><input id="newSiteContactEmail" placeholder="Contact email"></div>
+        <div style="align-self:end"><button class="btn2" id="addSiteContactBtn" type="button">Add Contact</button></div>
+      </div>
+      <div id="siteContactsList"></div>
+    </div>
+
+    
+<div class="folderPickerBox">
+  <h3>Dropbox / Job Folder Link</h3>
+  <p class="muted small">Select the Dropbox folder for this customer/site/job. Chrome or Edge can open Finder directly. Safari may only allow the manual Dropbox path box.</p>
+
+  <div class="folderActions">
+    <button class="btn2" id="selectJobFolderBtn" type="button">Select Dropbox / Job Folder</button>
+    <button class="btn2" id="clearJobFolderBtn" type="button">Clear Folder Link</button>
+  </div>
+
+  <label style="margin-top:10px">Manual Dropbox Folder Path</label>
+  <input id="manualJobFolderPath" placeholder="Example: /Dropbox/WGE Documents/Customers/Princes/Long Sutton">
+
+  <div class="folderPathPreview">
+    <strong>Selected folder:</strong>
+    <div id="selectedJobFolderDisplay">No folder selected yet.</div>
+  </div>
+</div>
+
+
+    <div style="height:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="updateCustomerSiteBtn">Save Customer/Site Changes</button>
+      <button class="btn2" id="useForQuoteBtn">Use Selected Site on Quote</button>
+      <button class="btn2" id="useForNewJobBtn">Use Selected Site on New Job</button>
+      <button class="btnRed" id="deleteSiteBtn">Remove Selected Site</button>
+      <button class="btnRed" id="deleteCustomerBtn">Remove Customer</button>
     </div>
   </div>
 
   <div class="card">
     <h2>Customer Database</h2>
-    <div id="customerDbList" class="customerDbList"></div>
+    <div id="customerList"></div>
   </div>
 </section>
-
 
 
 
@@ -5127,176 +5174,71 @@ function wireStartHereRaiseQuote(){
 }
 
 
-/* CUSTOMER DATABASE TAB FIX */
-function forceCustomersTabFix(){
-  const allTabs=[...document.querySelectorAll(".tab")];
+/* SAFE LOGIN RESTORE */
+const SAFE_WGE_USERS = {
+  "Wayne Bonney": "Admin2012!",
+  "David Guy": "Admin2012!",
+  "Wayne": "Admin2012!",
+  "David": "Admin2012!",
+  "Master": "Admin2012!"
+};
 
-  allTabs.forEach(btn=>{
-    const txt=(btn.textContent||"").toLowerCase();
-
-    if(txt.includes("customers")){
-      btn.onclick=null;
-
-      btn.addEventListener("click",()=>{
-        document.querySelectorAll("section").forEach(s=>s.classList.add("hidden"));
-
-        const possibleIds=["customers","customerSites","customersites","customerdb"];
-
-        let found=null;
-        possibleIds.forEach(id=>{
-          const el=document.getElementById(id);
-          if(el && !found) found=el;
-        });
-
-        if(found){
-          found.classList.remove("hidden");
-          window.scrollTo({top:0,behavior:"smooth"});
-        }else{
-          alert("Customers & Sites section not found.");
-        }
-      });
-    }
-  });
+function safeCurrentLogin(){
+  try{return JSON.parse(localStorage.getItem("wge_job_schedule_logged_in")||"null");}catch(e){return null;}
 }
 
-
-/* CUSTOMER TAB ROUTING FINAL */
-function finalCustomerTabRouting(){
-  document.querySelectorAll(".tab").forEach(btn=>{
-    const txt = String(btn.textContent||"").toLowerCase();
-    if(txt.includes("customers")){
-      btn.onclick = null;
-      btn.addEventListener("click",()=>showTab("customers"));
-    }
-  });
-}
-
-
-/* FIX RAISE QUOTE DROPDOWNS LINKED TO CUSTOMER DATABASE */
-function getCustomerDatabaseForRaiseQuote(){
-  if(!Array.isArray(customers)) customers = [];
-  try{
-    if(typeof ensureCustomerDatabaseSeed==="function") ensureCustomerDatabaseSeed();
-  }catch(e){}
-  return customers;
-}
-
-function populateRaiseQuoteCustomers(){
-  const sel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-  if(!sel) return;
-
-  const list = getCustomerDatabaseForRaiseQuote();
-  const current = sel.value;
-
-  sel.innerHTML = `<option value="">Select customer</option>` +
-    list.map(c=>`<option value="${c.id}">${safe(c.name||"Customer")}</option>`).join("");
-
-  if(current && list.some(c=>String(c.id)===String(current))) sel.value = current;
-
-  populateRaiseQuoteSites();
-}
-
-function populateRaiseQuoteSites(){
-  const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-  const siteSel = document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite");
-  if(!custSel || !siteSel) return;
-
-  const list = getCustomerDatabaseForRaiseQuote();
-  const customer = list.find(c=>String(c.id)===String(custSel.value||""));
-  const current = siteSel.value;
-
-  siteSel.innerHTML = `<option value="">Select site</option>` +
-    ((customer && customer.sites) || []).map(s=>`<option value="${s.id}">${safe(s.name||"Site")}</option>`).join("");
-
-  if(current && customer && (customer.sites||[]).some(s=>String(s.id)===String(current))) siteSel.value = current;
-
-  autoSelectRaiseQuoteType();
-}
-
-function autoSelectRaiseQuoteType(){
-  const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-  const typeSel = document.getElementById("raiseQuoteType") || document.getElementById("workspaceQuoteType");
-  if(!custSel || !typeSel) return;
-
-  const customer = getCustomerDatabaseForRaiseQuote().find(c=>String(c.id)===String(custSel.value||""));
-  const name = String(customer?.name || "").toLowerCase();
-
-  let type = "standard";
-  if(name.includes("ashco")) type = "ashco";
-  if(name.includes("kensal")) type = "kensal";
-
-  typeSel.value = type;
-}
-
-function createQuoteFromStartHere(){
-  const owner = (document.getElementById("raiseQuoteOwner") || document.getElementById("workspaceOwner"))?.value || "Wayne Bonney";
-  const customerId = (document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer"))?.value || "";
-  const siteId = (document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite"))?.value || "";
-  const type = (document.getElementById("raiseQuoteType") || document.getElementById("workspaceQuoteType"))?.value || "standard";
-
-  if(!customerId) return alert("Select a customer first.");
-  if(!siteId) return alert("Select a site first.");
-
-  const customer = getCustomerDatabaseForRaiseQuote().find(c=>String(c.id)===String(customerId));
-  const site = (customer?.sites||[]).find(s=>String(s.id)===String(siteId));
-
-  const ref = typeof nextRaiseQuoteNumber==="function" ? nextRaiseQuoteNumber() : ("WB" + Date.now());
-
-  if(el("quoteRef")) el("quoteRef").value = ref;
-  if(el("quotePreparedBy")) el("quotePreparedBy").value = owner;
-  if(el("quoteOwnerSelect")) el("quoteOwnerSelect").value = owner;
-  if(el("quoteCustomer")) el("quoteCustomer").value = String(customerId);
-
-  try{ populateQuoteSite(); }catch(e){}
-
-  if(el("quoteSite")) el("quoteSite").value = String(siteId);
-
-  if(el("quoteSiteAddress")) el("quoteSiteAddress").value = site?.address || customer?.invoiceAddress || "";
-  if(el("quoteEmailAddress")) el("quoteEmailAddress").value = site?.contactEmail || customer?.invoiceEmail || "";
-
-  try{ populateQuoteSiteAddress(); }catch(e){}
-
-  if(el("quoteTypeSelect")) el("quoteTypeSelect").value = type;
-  if(el("quoteNetPrice")) el("quoteNetPrice").value = "0.00";
-
-  try{ syncQuoteOwnerDetails(); }catch(e){}
-  try{ renderQuotePreview(); }catch(e){}
-  try{ saveQuoteToRegister("Draft"); }catch(e){}
-
-  showTab("quoteprint");
-}
-
-function wireStartHereRaiseQuote(){
-  setTimeout(()=>{
-    populateRaiseQuoteCustomers();
-
-    const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-    const siteSel = document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite");
-    const createBtn = document.getElementById("raiseQuoteCreateBtn") || document.getElementById("createQuoteNumberBtn");
-
-    if(custSel && custSel.dataset.linked !== "1"){
-      custSel.dataset.linked = "1";
-      custSel.addEventListener("change", populateRaiseQuoteSites);
-    }
-
-    if(siteSel && siteSel.dataset.linked !== "1"){
-      siteSel.dataset.linked = "1";
-      siteSel.addEventListener("change", autoSelectRaiseQuoteType);
-    }
-
-    if(createBtn && createBtn.dataset.linked !== "1"){
-      createBtn.dataset.linked = "1";
-      createBtn.addEventListener("click", createQuoteFromStartHere);
-    }
-  },200);
-}
-
-const originalShowTabRaiseQuoteFix = typeof showTab==="function" ? showTab : null;
-function showTab(id){
-  if(originalShowTabRaiseQuoteFix) originalShowTabRaiseQuoteFix(id);
-  if(id==="raisequote" || id==="quoteWorkspace"){
-    wireStartHereRaiseQuote();
+function safeApplyLogin(){
+  const user=safeCurrentLogin();
+  const login=document.getElementById("wgeJobLogin");
+  const bar=document.getElementById("wgeLoggedInBar");
+  if(user){
+    if(login) login.classList.add("hidden");
+    if(bar) bar.classList.remove("hidden");
+    const name=document.getElementById("wgeLoggedInName");
+    if(name) name.textContent="Logged in as " + (user.name||"Wayne Bonney");
+  }else{
+    if(login) login.classList.remove("hidden");
+    if(bar) bar.classList.add("hidden");
   }
+}
+
+function safeLogin(){
+  const userEl=document.getElementById("wgeJobLoginUser");
+  const passEl=document.getElementById("wgeJobLoginPassword");
+  const errorEl=document.getElementById("wgeJobLoginError");
+  const name=userEl ? userEl.value : "Wayne Bonney";
+  const pass=passEl ? passEl.value : "";
+  if(SAFE_WGE_USERS[name] !== pass){
+    if(errorEl) errorEl.textContent="Incorrect password. Use Admin2012!";
+    return;
+  }
+  const properName = name==="Wayne" ? "Wayne Bonney" : name==="David" ? "David Guy" : name;
+  localStorage.setItem("wge_job_schedule_logged_in", JSON.stringify({name:properName, loggedInAt:new Date().toISOString()}));
+  safeApplyLogin();
+}
+
+function safeLogout(){
+  localStorage.removeItem("wge_job_schedule_logged_in");
+  safeApplyLogin();
+}
+
+function wireSafeLogin(){
+  const btn=document.getElementById("wgeJobLoginBtn");
+  const logout=document.getElementById("wgeJobLogoutBtn");
+  const pass=document.getElementById("wgeJobLoginPassword");
+  if(btn && btn.dataset.safeLogin!=="1"){
+    btn.dataset.safeLogin="1";
+    btn.onclick=safeLogin;
+  }
+  if(logout && logout.dataset.safeLogout!=="1"){
+    logout.dataset.safeLogout="1";
+    logout.onclick=safeLogout;
+  }
+  if(pass && pass.dataset.safeEnter!=="1"){
+    pass.dataset.safeEnter="1";
+    pass.addEventListener("keydown",e=>{if(e.key==="Enter")safeLogin();});
+  }
+  safeApplyLogin();
 }
 
 document.addEventListener("DOMContentLoaded",()=>{loadAll();seedIfEmpty();document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));document.querySelectorAll("[data-user]").forEach(b=>b.addEventListener("click",()=>{currentUser=b.dataset.user;el("currentUserLabel").textContent=currentUser==="DG"?"David Job Schedule":currentUser==="MASTER"?"Master View":"Wayne Job Schedule";initialiseQuoteEnquiry();if(el("saveQuoteBtn"))el("saveQuoteBtn").addEventListener("click",()=>saveCurrentQuote());
@@ -5338,7 +5280,7 @@ if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{tr
 if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
 if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
 if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();forceCustomersTabFix();wireCustomerDatabase();finalCustomerTabRouting();wireCustomerDatabase();wireStartHereRaiseQuote();populateRaiseQuoteCustomers();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
+syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
 if(el("quoteContact"))el("quoteContact").addEventListener("change",()=>{populateQuoteContacts();renderQuotePreview()});el("jobCustomer").addEventListener("change",populateJobSite);el("jobOwner").addEventListener("change",renderJobs);el("addCustomerBtn").addEventListener("click",addCustomer);if(el("seedDefaultCustomersBtn"))el("seedDefaultCustomersBtn").addEventListener("click",seedWGEDefaultCustomers);el("addSiteBtn").addEventListener("click",addSite);if(el("addSiteContactBtn"))el("addSiteContactBtn").addEventListener("click",addSiteContact);
 if(el("deleteSiteBtn"))el("deleteSiteBtn").addEventListener("click",deleteSelectedSite);
 if(el("deleteCustomerBtn"))el("deleteCustomerBtn").addEventListener("click",deleteSelectedCustomer);if(el("selectJobFolderBtn"))el("selectJobFolderBtn").addEventListener("click",selectJobFolder);
@@ -5392,7 +5334,7 @@ if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{tr
 if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
 if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
 if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();forceCustomersTabFix();wireCustomerDatabase();finalCustomerTabRouting();wireCustomerDatabase();wireStartHereRaiseQuote();populateRaiseQuoteCustomers();renderAll()})
+syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();renderAll()})
 </script>
 
 <script>
@@ -7126,146 +7068,6 @@ function wireStartHereRaiseQuote(){
     b.textContent="Start Here - Raise Quote";
     b.addEventListener("click",()=>showTab("raisequote"));
     tabs.insertBefore(b,tabs.firstChild);
-  }
-}
-
-
-/* CUSTOMER TAB ROUTING FINAL */
-function finalCustomerTabRouting(){
-  document.querySelectorAll(".tab").forEach(btn=>{
-    const txt = String(btn.textContent||"").toLowerCase();
-    if(txt.includes("customers")){
-      btn.onclick = null;
-      btn.addEventListener("click",()=>showTab("customers"));
-    }
-  });
-}
-
-
-/* FIX RAISE QUOTE DROPDOWNS LINKED TO CUSTOMER DATABASE */
-function getCustomerDatabaseForRaiseQuote(){
-  if(!Array.isArray(customers)) customers = [];
-  try{
-    if(typeof ensureCustomerDatabaseSeed==="function") ensureCustomerDatabaseSeed();
-  }catch(e){}
-  return customers;
-}
-
-function populateRaiseQuoteCustomers(){
-  const sel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-  if(!sel) return;
-
-  const list = getCustomerDatabaseForRaiseQuote();
-  const current = sel.value;
-
-  sel.innerHTML = `<option value="">Select customer</option>` +
-    list.map(c=>`<option value="${c.id}">${safe(c.name||"Customer")}</option>`).join("");
-
-  if(current && list.some(c=>String(c.id)===String(current))) sel.value = current;
-
-  populateRaiseQuoteSites();
-}
-
-function populateRaiseQuoteSites(){
-  const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-  const siteSel = document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite");
-  if(!custSel || !siteSel) return;
-
-  const list = getCustomerDatabaseForRaiseQuote();
-  const customer = list.find(c=>String(c.id)===String(custSel.value||""));
-  const current = siteSel.value;
-
-  siteSel.innerHTML = `<option value="">Select site</option>` +
-    ((customer && customer.sites) || []).map(s=>`<option value="${s.id}">${safe(s.name||"Site")}</option>`).join("");
-
-  if(current && customer && (customer.sites||[]).some(s=>String(s.id)===String(current))) siteSel.value = current;
-
-  autoSelectRaiseQuoteType();
-}
-
-function autoSelectRaiseQuoteType(){
-  const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-  const typeSel = document.getElementById("raiseQuoteType") || document.getElementById("workspaceQuoteType");
-  if(!custSel || !typeSel) return;
-
-  const customer = getCustomerDatabaseForRaiseQuote().find(c=>String(c.id)===String(custSel.value||""));
-  const name = String(customer?.name || "").toLowerCase();
-
-  let type = "standard";
-  if(name.includes("ashco")) type = "ashco";
-  if(name.includes("kensal")) type = "kensal";
-
-  typeSel.value = type;
-}
-
-function createQuoteFromStartHere(){
-  const owner = (document.getElementById("raiseQuoteOwner") || document.getElementById("workspaceOwner"))?.value || "Wayne Bonney";
-  const customerId = (document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer"))?.value || "";
-  const siteId = (document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite"))?.value || "";
-  const type = (document.getElementById("raiseQuoteType") || document.getElementById("workspaceQuoteType"))?.value || "standard";
-
-  if(!customerId) return alert("Select a customer first.");
-  if(!siteId) return alert("Select a site first.");
-
-  const customer = getCustomerDatabaseForRaiseQuote().find(c=>String(c.id)===String(customerId));
-  const site = (customer?.sites||[]).find(s=>String(s.id)===String(siteId));
-
-  const ref = typeof nextRaiseQuoteNumber==="function" ? nextRaiseQuoteNumber() : ("WB" + Date.now());
-
-  if(el("quoteRef")) el("quoteRef").value = ref;
-  if(el("quotePreparedBy")) el("quotePreparedBy").value = owner;
-  if(el("quoteOwnerSelect")) el("quoteOwnerSelect").value = owner;
-  if(el("quoteCustomer")) el("quoteCustomer").value = String(customerId);
-
-  try{ populateQuoteSite(); }catch(e){}
-
-  if(el("quoteSite")) el("quoteSite").value = String(siteId);
-
-  if(el("quoteSiteAddress")) el("quoteSiteAddress").value = site?.address || customer?.invoiceAddress || "";
-  if(el("quoteEmailAddress")) el("quoteEmailAddress").value = site?.contactEmail || customer?.invoiceEmail || "";
-
-  try{ populateQuoteSiteAddress(); }catch(e){}
-
-  if(el("quoteTypeSelect")) el("quoteTypeSelect").value = type;
-  if(el("quoteNetPrice")) el("quoteNetPrice").value = "0.00";
-
-  try{ syncQuoteOwnerDetails(); }catch(e){}
-  try{ renderQuotePreview(); }catch(e){}
-  try{ saveQuoteToRegister("Draft"); }catch(e){}
-
-  showTab("quoteprint");
-}
-
-function wireStartHereRaiseQuote(){
-  setTimeout(()=>{
-    populateRaiseQuoteCustomers();
-
-    const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-    const siteSel = document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite");
-    const createBtn = document.getElementById("raiseQuoteCreateBtn") || document.getElementById("createQuoteNumberBtn");
-
-    if(custSel && custSel.dataset.linked !== "1"){
-      custSel.dataset.linked = "1";
-      custSel.addEventListener("change", populateRaiseQuoteSites);
-    }
-
-    if(siteSel && siteSel.dataset.linked !== "1"){
-      siteSel.dataset.linked = "1";
-      siteSel.addEventListener("change", autoSelectRaiseQuoteType);
-    }
-
-    if(createBtn && createBtn.dataset.linked !== "1"){
-      createBtn.dataset.linked = "1";
-      createBtn.addEventListener("click", createQuoteFromStartHere);
-    }
-  },200);
-}
-
-const originalShowTabRaiseQuoteFix = typeof showTab==="function" ? showTab : null;
-function showTab(id){
-  if(originalShowTabRaiseQuoteFix) originalShowTabRaiseQuoteFix(id);
-  if(id==="raisequote" || id==="quoteWorkspace"){
-    wireStartHereRaiseQuote();
   }
 }
 
@@ -9028,146 +8830,6 @@ function wireStartHereRaiseQuote(){
   }
 }
 
-
-/* CUSTOMER TAB ROUTING FINAL */
-function finalCustomerTabRouting(){
-  document.querySelectorAll(".tab").forEach(btn=>{
-    const txt = String(btn.textContent||"").toLowerCase();
-    if(txt.includes("customers")){
-      btn.onclick = null;
-      btn.addEventListener("click",()=>showTab("customers"));
-    }
-  });
-}
-
-
-/* FIX RAISE QUOTE DROPDOWNS LINKED TO CUSTOMER DATABASE */
-function getCustomerDatabaseForRaiseQuote(){
-  if(!Array.isArray(customers)) customers = [];
-  try{
-    if(typeof ensureCustomerDatabaseSeed==="function") ensureCustomerDatabaseSeed();
-  }catch(e){}
-  return customers;
-}
-
-function populateRaiseQuoteCustomers(){
-  const sel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-  if(!sel) return;
-
-  const list = getCustomerDatabaseForRaiseQuote();
-  const current = sel.value;
-
-  sel.innerHTML = `<option value="">Select customer</option>` +
-    list.map(c=>`<option value="${c.id}">${safe(c.name||"Customer")}</option>`).join("");
-
-  if(current && list.some(c=>String(c.id)===String(current))) sel.value = current;
-
-  populateRaiseQuoteSites();
-}
-
-function populateRaiseQuoteSites(){
-  const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-  const siteSel = document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite");
-  if(!custSel || !siteSel) return;
-
-  const list = getCustomerDatabaseForRaiseQuote();
-  const customer = list.find(c=>String(c.id)===String(custSel.value||""));
-  const current = siteSel.value;
-
-  siteSel.innerHTML = `<option value="">Select site</option>` +
-    ((customer && customer.sites) || []).map(s=>`<option value="${s.id}">${safe(s.name||"Site")}</option>`).join("");
-
-  if(current && customer && (customer.sites||[]).some(s=>String(s.id)===String(current))) siteSel.value = current;
-
-  autoSelectRaiseQuoteType();
-}
-
-function autoSelectRaiseQuoteType(){
-  const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-  const typeSel = document.getElementById("raiseQuoteType") || document.getElementById("workspaceQuoteType");
-  if(!custSel || !typeSel) return;
-
-  const customer = getCustomerDatabaseForRaiseQuote().find(c=>String(c.id)===String(custSel.value||""));
-  const name = String(customer?.name || "").toLowerCase();
-
-  let type = "standard";
-  if(name.includes("ashco")) type = "ashco";
-  if(name.includes("kensal")) type = "kensal";
-
-  typeSel.value = type;
-}
-
-function createQuoteFromStartHere(){
-  const owner = (document.getElementById("raiseQuoteOwner") || document.getElementById("workspaceOwner"))?.value || "Wayne Bonney";
-  const customerId = (document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer"))?.value || "";
-  const siteId = (document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite"))?.value || "";
-  const type = (document.getElementById("raiseQuoteType") || document.getElementById("workspaceQuoteType"))?.value || "standard";
-
-  if(!customerId) return alert("Select a customer first.");
-  if(!siteId) return alert("Select a site first.");
-
-  const customer = getCustomerDatabaseForRaiseQuote().find(c=>String(c.id)===String(customerId));
-  const site = (customer?.sites||[]).find(s=>String(s.id)===String(siteId));
-
-  const ref = typeof nextRaiseQuoteNumber==="function" ? nextRaiseQuoteNumber() : ("WB" + Date.now());
-
-  if(el("quoteRef")) el("quoteRef").value = ref;
-  if(el("quotePreparedBy")) el("quotePreparedBy").value = owner;
-  if(el("quoteOwnerSelect")) el("quoteOwnerSelect").value = owner;
-  if(el("quoteCustomer")) el("quoteCustomer").value = String(customerId);
-
-  try{ populateQuoteSite(); }catch(e){}
-
-  if(el("quoteSite")) el("quoteSite").value = String(siteId);
-
-  if(el("quoteSiteAddress")) el("quoteSiteAddress").value = site?.address || customer?.invoiceAddress || "";
-  if(el("quoteEmailAddress")) el("quoteEmailAddress").value = site?.contactEmail || customer?.invoiceEmail || "";
-
-  try{ populateQuoteSiteAddress(); }catch(e){}
-
-  if(el("quoteTypeSelect")) el("quoteTypeSelect").value = type;
-  if(el("quoteNetPrice")) el("quoteNetPrice").value = "0.00";
-
-  try{ syncQuoteOwnerDetails(); }catch(e){}
-  try{ renderQuotePreview(); }catch(e){}
-  try{ saveQuoteToRegister("Draft"); }catch(e){}
-
-  showTab("quoteprint");
-}
-
-function wireStartHereRaiseQuote(){
-  setTimeout(()=>{
-    populateRaiseQuoteCustomers();
-
-    const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-    const siteSel = document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite");
-    const createBtn = document.getElementById("raiseQuoteCreateBtn") || document.getElementById("createQuoteNumberBtn");
-
-    if(custSel && custSel.dataset.linked !== "1"){
-      custSel.dataset.linked = "1";
-      custSel.addEventListener("change", populateRaiseQuoteSites);
-    }
-
-    if(siteSel && siteSel.dataset.linked !== "1"){
-      siteSel.dataset.linked = "1";
-      siteSel.addEventListener("change", autoSelectRaiseQuoteType);
-    }
-
-    if(createBtn && createBtn.dataset.linked !== "1"){
-      createBtn.dataset.linked = "1";
-      createBtn.addEventListener("click", createQuoteFromStartHere);
-    }
-  },200);
-}
-
-const originalShowTabRaiseQuoteFix = typeof showTab==="function" ? showTab : null;
-function showTab(id){
-  if(originalShowTabRaiseQuoteFix) originalShowTabRaiseQuoteFix(id);
-  if(id==="raisequote" || id==="quoteWorkspace"){
-    wireStartHereRaiseQuote();
-  }
-}
-
 document.addEventListener("DOMContentLoaded", function(){
     document.querySelectorAll(".tab").forEach(btn=>{
       btn.onclick = function(e){
@@ -10918,146 +10580,6 @@ function wireStartHereRaiseQuote(){
     b.textContent="Start Here - Raise Quote";
     b.addEventListener("click",()=>showTab("raisequote"));
     tabs.insertBefore(b,tabs.firstChild);
-  }
-}
-
-
-/* CUSTOMER TAB ROUTING FINAL */
-function finalCustomerTabRouting(){
-  document.querySelectorAll(".tab").forEach(btn=>{
-    const txt = String(btn.textContent||"").toLowerCase();
-    if(txt.includes("customers")){
-      btn.onclick = null;
-      btn.addEventListener("click",()=>showTab("customers"));
-    }
-  });
-}
-
-
-/* FIX RAISE QUOTE DROPDOWNS LINKED TO CUSTOMER DATABASE */
-function getCustomerDatabaseForRaiseQuote(){
-  if(!Array.isArray(customers)) customers = [];
-  try{
-    if(typeof ensureCustomerDatabaseSeed==="function") ensureCustomerDatabaseSeed();
-  }catch(e){}
-  return customers;
-}
-
-function populateRaiseQuoteCustomers(){
-  const sel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-  if(!sel) return;
-
-  const list = getCustomerDatabaseForRaiseQuote();
-  const current = sel.value;
-
-  sel.innerHTML = `<option value="">Select customer</option>` +
-    list.map(c=>`<option value="${c.id}">${safe(c.name||"Customer")}</option>`).join("");
-
-  if(current && list.some(c=>String(c.id)===String(current))) sel.value = current;
-
-  populateRaiseQuoteSites();
-}
-
-function populateRaiseQuoteSites(){
-  const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-  const siteSel = document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite");
-  if(!custSel || !siteSel) return;
-
-  const list = getCustomerDatabaseForRaiseQuote();
-  const customer = list.find(c=>String(c.id)===String(custSel.value||""));
-  const current = siteSel.value;
-
-  siteSel.innerHTML = `<option value="">Select site</option>` +
-    ((customer && customer.sites) || []).map(s=>`<option value="${s.id}">${safe(s.name||"Site")}</option>`).join("");
-
-  if(current && customer && (customer.sites||[]).some(s=>String(s.id)===String(current))) siteSel.value = current;
-
-  autoSelectRaiseQuoteType();
-}
-
-function autoSelectRaiseQuoteType(){
-  const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-  const typeSel = document.getElementById("raiseQuoteType") || document.getElementById("workspaceQuoteType");
-  if(!custSel || !typeSel) return;
-
-  const customer = getCustomerDatabaseForRaiseQuote().find(c=>String(c.id)===String(custSel.value||""));
-  const name = String(customer?.name || "").toLowerCase();
-
-  let type = "standard";
-  if(name.includes("ashco")) type = "ashco";
-  if(name.includes("kensal")) type = "kensal";
-
-  typeSel.value = type;
-}
-
-function createQuoteFromStartHere(){
-  const owner = (document.getElementById("raiseQuoteOwner") || document.getElementById("workspaceOwner"))?.value || "Wayne Bonney";
-  const customerId = (document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer"))?.value || "";
-  const siteId = (document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite"))?.value || "";
-  const type = (document.getElementById("raiseQuoteType") || document.getElementById("workspaceQuoteType"))?.value || "standard";
-
-  if(!customerId) return alert("Select a customer first.");
-  if(!siteId) return alert("Select a site first.");
-
-  const customer = getCustomerDatabaseForRaiseQuote().find(c=>String(c.id)===String(customerId));
-  const site = (customer?.sites||[]).find(s=>String(s.id)===String(siteId));
-
-  const ref = typeof nextRaiseQuoteNumber==="function" ? nextRaiseQuoteNumber() : ("WB" + Date.now());
-
-  if(el("quoteRef")) el("quoteRef").value = ref;
-  if(el("quotePreparedBy")) el("quotePreparedBy").value = owner;
-  if(el("quoteOwnerSelect")) el("quoteOwnerSelect").value = owner;
-  if(el("quoteCustomer")) el("quoteCustomer").value = String(customerId);
-
-  try{ populateQuoteSite(); }catch(e){}
-
-  if(el("quoteSite")) el("quoteSite").value = String(siteId);
-
-  if(el("quoteSiteAddress")) el("quoteSiteAddress").value = site?.address || customer?.invoiceAddress || "";
-  if(el("quoteEmailAddress")) el("quoteEmailAddress").value = site?.contactEmail || customer?.invoiceEmail || "";
-
-  try{ populateQuoteSiteAddress(); }catch(e){}
-
-  if(el("quoteTypeSelect")) el("quoteTypeSelect").value = type;
-  if(el("quoteNetPrice")) el("quoteNetPrice").value = "0.00";
-
-  try{ syncQuoteOwnerDetails(); }catch(e){}
-  try{ renderQuotePreview(); }catch(e){}
-  try{ saveQuoteToRegister("Draft"); }catch(e){}
-
-  showTab("quoteprint");
-}
-
-function wireStartHereRaiseQuote(){
-  setTimeout(()=>{
-    populateRaiseQuoteCustomers();
-
-    const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-    const siteSel = document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite");
-    const createBtn = document.getElementById("raiseQuoteCreateBtn") || document.getElementById("createQuoteNumberBtn");
-
-    if(custSel && custSel.dataset.linked !== "1"){
-      custSel.dataset.linked = "1";
-      custSel.addEventListener("change", populateRaiseQuoteSites);
-    }
-
-    if(siteSel && siteSel.dataset.linked !== "1"){
-      siteSel.dataset.linked = "1";
-      siteSel.addEventListener("change", autoSelectRaiseQuoteType);
-    }
-
-    if(createBtn && createBtn.dataset.linked !== "1"){
-      createBtn.dataset.linked = "1";
-      createBtn.addEventListener("click", createQuoteFromStartHere);
-    }
-  },200);
-}
-
-const originalShowTabRaiseQuoteFix = typeof showTab==="function" ? showTab : null;
-function showTab(id){
-  if(originalShowTabRaiseQuoteFix) originalShowTabRaiseQuoteFix(id);
-  if(id==="raisequote" || id==="quoteWorkspace"){
-    wireStartHereRaiseQuote();
   }
 }
 
