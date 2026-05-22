@@ -5165,6 +5165,39 @@ function wireStartHereRaiseQuote(){
   }
 }
 
+
+/* CUSTOMER DATABASE TAB FIX */
+function forceCustomersTabFix(){
+  const allTabs=[...document.querySelectorAll(".tab")];
+
+  allTabs.forEach(btn=>{
+    const txt=(btn.textContent||"").toLowerCase();
+
+    if(txt.includes("customers")){
+      btn.onclick=null;
+
+      btn.addEventListener("click",()=>{
+        document.querySelectorAll("section").forEach(s=>s.classList.add("hidden"));
+
+        const possibleIds=["customers","customerSites","customersites","customerdb"];
+
+        let found=null;
+        possibleIds.forEach(id=>{
+          const el=document.getElementById(id);
+          if(el && !found) found=el;
+        });
+
+        if(found){
+          found.classList.remove("hidden");
+          window.scrollTo({top:0,behavior:"smooth"});
+        }else{
+          alert("Customers & Sites section not found.");
+        }
+      });
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded",()=>{loadAll();seedIfEmpty();document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));document.querySelectorAll("[data-user]").forEach(b=>b.addEventListener("click",()=>{currentUser=b.dataset.user;el("currentUserLabel").textContent=currentUser==="DG"?"David Job Schedule":currentUser==="MASTER"?"Master View":"Wayne Job Schedule";initialiseQuoteEnquiry();if(el("saveQuoteBtn"))el("saveQuoteBtn").addEventListener("click",()=>saveCurrentQuote());
 if(el("newQuoteBtn"))el("newQuoteBtn").addEventListener("click",newBlankQuote);
 if(el("quoteSearch"))el("quoteSearch").addEventListener("input",renderQuoteRegister);
@@ -5204,7 +5237,7 @@ if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{tr
 if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
 if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
 if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
+syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();forceCustomersTabFix();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
 if(el("quoteContact"))el("quoteContact").addEventListener("change",()=>{populateQuoteContacts();renderQuotePreview()});el("jobCustomer").addEventListener("change",populateJobSite);el("jobOwner").addEventListener("change",renderJobs);el("addCustomerBtn").addEventListener("click",addCustomer);if(el("seedDefaultCustomersBtn"))el("seedDefaultCustomersBtn").addEventListener("click",seedWGEDefaultCustomers);el("addSiteBtn").addEventListener("click",addSite);if(el("addSiteContactBtn"))el("addSiteContactBtn").addEventListener("click",addSiteContact);
 if(el("deleteSiteBtn"))el("deleteSiteBtn").addEventListener("click",deleteSelectedSite);
 if(el("deleteCustomerBtn"))el("deleteCustomerBtn").addEventListener("click",deleteSelectedCustomer);if(el("selectJobFolderBtn"))el("selectJobFolderBtn").addEventListener("click",selectJobFolder);
@@ -5258,7 +5291,7 @@ if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{tr
 if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
 if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
 if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();renderAll()})
+syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();forceCustomersTabFix();renderAll()})
 </script>
 
 <script>
