@@ -11579,5 +11579,111 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
+
+<script>
+/* FINAL SELECTABLE SITE DROPDOWN FIX */
+(function(){
+  const SITE_MAP = {
+    "kensal": ["British Pepper and Spice","Barts","Chivas Regal","JD Sports","Lucozade Ribena Suntory","McCormick"],
+    "ashco": ["Colindale"],
+    "team": ["Team Abbey Barns"],
+    "stamford": ["Hollywell Quarry"],
+    "mccormick": ["McCormick Peterborough"],
+    "princes": ["Long Sutton"]
+  };
+
+  function findCustomerSelect(){
+    return document.getElementById("raiseQuoteCustomer")
+      || document.getElementById("workspaceCustomer")
+      || [...document.querySelectorAll("select")].find(s=>{
+        const label=(s.closest("div")?.querySelector("label")?.textContent||"").toLowerCase();
+        const title=(s.closest("div")?.querySelector("strong")?.textContent||"").toLowerCase();
+        return label.includes("customer") || title.includes("customer");
+      });
+  }
+
+  function findSiteSelect(){
+    return document.getElementById("raiseQuoteSite")
+      || document.getElementById("workspaceSite")
+      || [...document.querySelectorAll("select")].find(s=>{
+        const label=(s.closest("div")?.querySelector("label")?.textContent||"").toLowerCase();
+        const title=(s.closest("div")?.querySelector("strong")?.textContent||"").toLowerCase();
+        return label === "site" || title.includes("site");
+      });
+  }
+
+  function findCostingSelect(){
+    return document.getElementById("raiseQuoteType")
+      || document.getElementById("workspaceQuoteType")
+      || [...document.querySelectorAll("select")].find(s=>{
+        const label=(s.closest("div")?.querySelector("label")?.textContent||"").toLowerCase();
+        const title=(s.closest("div")?.querySelector("strong")?.textContent||"").toLowerCase();
+        return label.includes("auto-selected") || title.includes("costing");
+      });
+  }
+
+  function customerKey(){
+    const c=findCustomerSelect();
+    const text=String(c?.options[c.selectedIndex]?.textContent || c?.value || "").toLowerCase();
+    if(text.includes("kensal")) return "kensal";
+    if(text.includes("ashco")) return "ashco";
+    if(text.includes("team")) return "team";
+    if(text.includes("stamford")) return "stamford";
+    if(text.includes("princes")) return "princes";
+    if(text.includes("mccormick")) return "mccormick";
+    return "";
+  }
+
+  function cleanSiteSelect(){
+    const old=findSiteSelect();
+    if(!old) return null;
+    if(old.dataset.cleanSelectableSite === "1") return old;
+    const fresh=old.cloneNode(false);
+    fresh.id=old.id || "raiseQuoteSite";
+    fresh.className=old.className;
+    fresh.name=old.name;
+    fresh.dataset.cleanSelectableSite="1";
+    old.parentNode.replaceChild(fresh, old);
+    return fresh;
+  }
+
+  function populateSites(keepValue){
+    const s=cleanSiteSelect();
+    if(!s) return;
+    const key=customerKey();
+    const list=SITE_MAP[key] || [];
+    const oldValue=keepValue ? s.value : "";
+    s.innerHTML='<option value="">Select site</option>' + list.map(site=>{
+      const selected = oldValue === site ? " selected" : "";
+      return '<option value="'+site.replace(/"/g,"&quot;")+'"'+selected+'>'+site+'</option>';
+    }).join("");
+
+    const type=findCostingSelect();
+    if(type){
+      if(key==="kensal") type.value="kensal";
+      else if(key==="ashco") type.value="ashco";
+      else type.value="standard";
+    }
+    s.onchange=function(){ s.dataset.selectedSite=s.value; };
+  }
+
+  function wire(){
+    const c=findCustomerSelect();
+    if(c && c.dataset.cleanSiteCustomer !== "1"){
+      c.dataset.cleanSiteCustomer="1";
+      c.addEventListener("change", function(){ setTimeout(()=>populateSites(false), 20); });
+    }
+    populateSites(true);
+  }
+
+  window.WGE_forceStartHereSites = function(){ populateSites(true); };
+
+  document.addEventListener("DOMContentLoaded", wire);
+  setTimeout(wire,100);
+  setTimeout(wire,600);
+  setTimeout(wire,1500);
+})();
+</script>
+
 </body>
 </html>
