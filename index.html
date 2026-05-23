@@ -4,7 +4,84 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Will Guy Electrical Job Schedule</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
+/* ABSOLUTE SITE DROPDOWN FIX */
+function forcePopulateSitesNow(){
+  const customerSel =
+    document.getElementById("raiseQuoteCustomer") ||
+    document.querySelector('[id*="Customer"]');
+
+  const siteSel =
+    document.getElementById("raiseQuoteSite") ||
+    document.querySelector('[id*="Site"]');
+
+  if(!customerSel || !siteSel) return;
+
+  const customerName = (customerSel.options[customerSel.selectedIndex]?.text || customerSel.value || "").toLowerCase();
+
+  const sites = {
+    "kensal":[
+      "British Pepper and Spice",
+      "Barts",
+      "Chivas Regal",
+      "JD Sports",
+      "Lucozade Ribena Suntory",
+      "McCormick"
+    ],
+    "ashco building and maintenance services ltd":[
+      "Colindale"
+    ],
+    "team consulting ltd":[
+      "Team Abbey Barns"
+    ],
+    "stamford stone company ltd":[
+      "Hollywell Quarry"
+    ],
+    "mccormick":[
+      "McCormick Peterborough"
+    ],
+    "princes group plc":[
+      "Long Sutton"
+    ]
+  };
+
+  let matched = [];
+  Object.keys(sites).forEach(key=>{
+    if(customerName.includes(key)){
+      matched = sites[key];
+    }
+  });
+
+  siteSel.innerHTML = '<option value="">Select site</option>' +
+    matched.map(s=>`<option value="${s}">${s}</option>`).join("");
+
+  if(customerName.includes("kensal")){
+    const costing =
+      document.getElementById("raiseQuoteType") ||
+      document.getElementById("workspaceQuoteType");
+    if(costing) costing.value = "kensal";
+  }
+
+  if(customerName.includes("ashco")){
+    const costing =
+      document.getElementById("raiseQuoteType") ||
+      document.getElementById("workspaceQuoteType");
+    if(costing) costing.value = "ashco";
+  }
+}
+
+setTimeout(forcePopulateSitesNow,100);
+setTimeout(forcePopulateSitesNow,500);
+setTimeout(forcePopulateSitesNow,1500);
+
+document.addEventListener("change",function(e){
+  const id = String(e.target.id || "").toLowerCase();
+  if(id.includes("customer")){
+    setTimeout(forcePopulateSitesNow,50);
+  }
+});
+
+</script>
 <style>
 :root{--blue:#0f7fb7;--blue2:#075d8d;--bg:#f3f7fb;--card:#fff;--text:#102033;--muted:#64748b;--border:#dbe5ef;--green:#0e9f6e;--red:#dc2626;--amber:#d97706}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}.hidden{display:none!important}.top{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;padding:16px;border-bottom-left-radius:28px;border-bottom-right-radius:28px}.wrap{max-width:1280px;margin:0 auto;padding:16px}.logoBox{background:white;border-radius:18px;padding:10px;display:inline-flex;align-items:center;justify-content:center}.logoBox img{max-width:300px;height:auto;border-radius:8px}h1{margin:10px 0 4px;font-size:28px}h2{margin:0 0 10px}h3{margin:0 0 8px}p{margin:0}.muted{color:var(--muted)}.whiteMuted{color:rgba(255,255,255,.85)}.small{font-size:13px}.card{background:#fff;border:1px solid var(--border);border-radius:22px;padding:16px;box-shadow:0 8px 24px rgba(15,23,42,.06);margin-bottom:14px}.grid{display:grid;grid-template-columns:1fr;gap:12px}@media(min-width:900px){.grid2{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:repeat(3,1fr)}.grid4{grid-template-columns:repeat(4,1fr)}.quoteGrid{grid-template-columns:420px 1fr}}.tabs{display:flex;gap:8px;overflow:auto;padding:4px 0 14px}.tab{background:white;color:var(--blue2);border:1px solid var(--border);white-space:nowrap;border-radius:14px;padding:12px 14px;font-weight:800;cursor:pointer}.tab.active{background:var(--blue);color:white;border-color:var(--blue)}button{border:0;border-radius:14px;padding:12px 14px;font-weight:800;cursor:pointer;font-size:15px}.btn{background:var(--blue);color:white}.btn2{background:#e8f5fc;color:var(--blue2)}.btnGreen{background:#dcfce7;color:var(--green)}.btnRed{background:#fee2e2;color:var(--red)}label{display:block;font-size:12px;font-weight:800;color:var(--muted);margin-bottom:5px}input,select,textarea{width:100%;border:1px solid var(--border);background:white;color:var(--text);border-radius:14px;padding:11px 12px;font-size:15px;outline:none}textarea{min-height:90px;resize:vertical}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}th{color:var(--muted);font-size:12px}.tableWrap{overflow:auto}.bar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.kpi{display:flex;justify-content:space-between;align-items:center}.kpi strong{font-size:26px}.pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.Open{background:#e8f5fc;color:var(--blue2)}.InProgress{background:#fff7ed;color:var(--amber)}.ReadytoInvoice{background:#fef3c7;color:#92400e}.Invoiced{background:#dcfce7;color:var(--green)}.OnHold{background:#fee2e2;color:var(--red)}
