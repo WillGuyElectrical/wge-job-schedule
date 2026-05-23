@@ -1172,6 +1172,45 @@ z-index:0;
   margin-bottom:8px!important;
 }
 
+
+/* MASTER QUOTE/JOB WORKSPACE LINKING */
+.masterWorkspaceBanner{
+  background:#dcfce7;
+  border:1px solid #86efac;
+  color:#166534;
+  border-radius:16px;
+  padding:10px 12px;
+  margin:10px 0;
+  font-weight:900;
+}
+.masterWorkspaceNav{
+  background:#f8fafc;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:12px;
+  margin-bottom:12px;
+}
+.masterWorkspaceNav .navBtns{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+.masterJobStatusPill{
+  display:inline-block;
+  background:#e0f2fe;
+  color:#075985;
+  border-radius:999px;
+  padding:4px 9px;
+  font-size:12px;
+  font-weight:900;
+  margin-left:6px;
+}
+
+
+/* WGE FINAL PRINT PDF CLEANUP */
+@media print{body{margin:0!important;background:#fff!important}.top,.tabs,.quoteNoPrint,.masterWorkspaceNav,.wgeLoggedInBar{display:none!important}.wrap{max-width:none!important;margin:0!important;padding:0!important}.card{box-shadow:none!important;border:0!important}.quotePage,.ramsPage,#quotePreview,#ramsPreview{margin-top:0!important;break-before:auto!important;page-break-before:auto!important}}
+
 </style>
 </head>
 <body>
@@ -5553,6 +5592,390 @@ setTimeout(finalWireCreateQuoteButton, 100);
 setTimeout(finalWireCreateQuoteButton, 500);
 setTimeout(finalWireCreateQuoteButton, 1200);
 
+
+/* FINAL CUSTOMER/SITE LINK INTO QUOTE GENERATOR */
+function finalEnsureDefaultCustomersExist(){
+  try{
+    if(typeof forceMergeDefaultCustomers==="function") forceMergeDefaultCustomers();
+  }catch(e){}
+  if(!Array.isArray(window.customers)) window.customers = [];
+  if(window.customers.length) return;
+
+  window.customers = [
+    {
+      id:"cust_kensal",
+      name:"Kensal",
+      invoiceAddress:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR",
+      invoiceEmail:"accounts@kensal.com",
+      sites:[
+        {id:"site_kensal_bps",name:"British Pepper and Spice",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR",contacts:[]},
+        {id:"site_kensal_barts",name:"Barts",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR",contacts:[]},
+        {id:"site_kensal_chivas",name:"Chivas Regal",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR",contacts:[]},
+        {id:"site_kensal_jd",name:"JD Sports",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR",contacts:[]},
+        {id:"site_kensal_lrs",name:"Lucozade Ribena Suntory",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR",contacts:[]},
+        {id:"site_kensal_mccormick",name:"McCormick",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR",contacts:[]}
+      ]
+    },
+    {
+      id:"cust_ashco",
+      name:"ASHCO Building and Maintenance Services Ltd",
+      invoiceAddress:"C/O The Demcom Stadium\nDownham Road\nEly\nCambs\nCB6 2SH",
+      invoiceEmail:"office@ashcoservices.co.uk; trevor@ashcoservices.co.uk",
+      sites:[{id:"site_ashco_colindale",name:"Colindale",address:"C/O The Demcom Stadium\nDownham Road\nEly\nCambs\nCB6 2SH",contacts:[]}]
+    },
+    {
+      id:"cust_team",
+      name:"Team Consulting Ltd",
+      invoiceAddress:"Abbey Barns\nDuxford Road\nIckleton\nCambridge\nCB10 1SX",
+      invoiceEmail:"Martin.bond@team-consulting.com",
+      sites:[{id:"site_team_abbey",name:"Team Abbey Barns",address:"Abbey Barns\nDuxford Road\nIckleton\nCambridge\nCB10 1SX",contacts:[]}]
+    },
+    {
+      id:"cust_stamford",
+      name:"Stamford Stone Company Ltd",
+      invoiceAddress:"Stamford Stone Company Ltd\nSwaddywell Quarry\nStamford Road\nHelpston\nPeterborough\nPE6 7EL",
+      invoiceEmail:"shelley@stamfordstone.co.uk",
+      sites:[{id:"site_stamford_hollywell",name:"Hollywell Quarry",address:"Swaddywell Quarry\nStamford Road\nHelpston\nPeterborough\nPE6 7EL",contacts:[]}]
+    },
+    {
+      id:"cust_mccormick",
+      name:"McCormick",
+      invoiceAddress:"McCormick\nAlwalton Hill\nPeterborough\nPE7 3HH",
+      invoiceEmail:"AP_UK@mccormick.com",
+      sites:[{id:"site_mccormick_pboro",name:"McCormick Peterborough",address:"McCormick\nAlwalton Hill\nPeterborough\nPE7 3HH",contacts:[]}]
+    },
+    {
+      id:"cust_princes",
+      name:"Princes Group PLC",
+      invoiceAddress:"Princes Group PLC\nRoyal Liver Building\nPier Head\nLiverpool\nL3 1NX",
+      invoiceEmail:"ukaccountspayable@princes.co.uk",
+      sites:[{id:"site_princes_longsutton",name:"Long Sutton",address:"Bridge Road\nLong Sutton\nSpalding\nLincolnshire\nPE12 9EQ",contacts:[{name:"David Pickaver",email:""}]}]
+    }
+  ];
+  try{ saveAll(); }catch(e){}
+}
+
+function quoteSelectOptionHtml(value, label, selected){
+  return `<option value="${String(value).replace(/"/g,'&quot;')}" ${selected ? "selected" : ""}>${safe(label||"")}</option>`;
+}
+
+function populateQuoteGeneratorCustomerDropdown(selectedCustomerId){
+  finalEnsureDefaultCustomersExist();
+  const sel = document.getElementById("quoteCustomer");
+  if(!sel) return;
+  sel.innerHTML = `<option value="">Select customer</option>` +
+    window.customers.map(c => quoteSelectOptionHtml(c.id, c.name, String(c.id)===String(selectedCustomerId))).join("");
+  if(selectedCustomerId) sel.value = selectedCustomerId;
+}
+
+function populateQuoteGeneratorSiteDropdown(customerId, selectedSiteId){
+  finalEnsureDefaultCustomersExist();
+  const c = window.customers.find(x => String(x.id) === String(customerId));
+  const sel = document.getElementById("quoteSite");
+  if(!sel) return;
+  sel.innerHTML = ((c && c.sites && c.sites.length) ? `<option value="">Select site</option>` : `<option value="">No sites</option>`) +
+    ((c && c.sites) || []).map(s => quoteSelectOptionHtml(s.id, s.name, String(s.id)===String(selectedSiteId))).join("");
+  if(selectedSiteId) sel.value = selectedSiteId;
+}
+
+function populateQuoteGeneratorContactDropdown(customerId, siteId){
+  const c = window.customers.find(x => String(x.id) === String(customerId));
+  const s = ((c && c.sites) || []).find(x => String(x.id) === String(siteId));
+  const sel = document.getElementById("quoteContact");
+  if(!sel) return;
+
+  const contacts = (s && s.contacts && s.contacts.length) ? s.contacts : [];
+  if(contacts.length){
+    sel.innerHTML = contacts.map((ct,i)=>`<option value="${i}">${safe(ct.name||"Contact")}${ct.email ? " — "+safe(ct.email) : ""}</option>`).join("");
+  }else{
+    sel.innerHTML = `<option value="">No site contact saved</option>`;
+  }
+}
+
+function setQuoteGeneratorFromMasterJob(job){
+  if(!job) return;
+
+  finalEnsureDefaultCustomersExist();
+
+  // Make sure the selected customer/site exists in the shared array.
+  let c = window.customers.find(x => String(x.id) === String(job.customerId) || String(x.name||"").toLowerCase() === String(job.customer||"").toLowerCase());
+  if(!c){
+    c = {id:job.customerId||("cust_"+Date.now()), name:job.customer||"", invoiceAddress:job.invoiceAddress||"", invoiceEmail:job.invoiceEmail||"", sites:[]};
+    window.customers.push(c);
+  }
+  if(!Array.isArray(c.sites)) c.sites = [];
+
+  let s = c.sites.find(x => String(x.id) === String(job.siteId) || String(x.name||"").toLowerCase() === String(job.site||"").toLowerCase());
+  if(!s){
+    s = {id:job.siteId||("site_"+Date.now()), name:job.site||"", address:job.siteAddress||"", contacts:[]};
+    c.sites.push(s);
+  }
+
+  populateQuoteGeneratorCustomerDropdown(c.id);
+  populateQuoteGeneratorSiteDropdown(c.id, s.id);
+  populateQuoteGeneratorContactDropdown(c.id, s.id);
+
+  if(el("quoteCustomer")) el("quoteCustomer").value = c.id;
+  if(el("quoteSite")) el("quoteSite").value = s.id;
+
+  if(el("quoteSiteAddress")) el("quoteSiteAddress").value = s.address || c.invoiceAddress || job.siteAddress || "";
+  if(el("quoteEmailAddress")) el("quoteEmailAddress").value = (s.contacts && s.contacts[0] && s.contacts[0].email) || c.invoiceEmail || job.siteContactEmail || job.invoiceEmail || "";
+
+  if(el("quoteRef")) el("quoteRef").value = job.quoteRef || job.jobNumber || "";
+  if(el("quotePreparedBy")) el("quotePreparedBy").value = job.owner || "";
+  if(el("quoteOwnerSelect")) el("quoteOwnerSelect").value = job.owner || "";
+  if(el("quoteTypeSelect")) el("quoteTypeSelect").value = job.costingType || "standard";
+  if(el("quoteProjectTitle")) el("quoteProjectTitle").value = job.quote?.project || job.site || "";
+  if(el("quoteNetPrice")) el("quoteNetPrice").value = Number(job.quote?.netPrice || job.costing?.total || 0).toFixed(2);
+
+  try{ syncQuoteOwnerDetails(); }catch(e){}
+  try{ renderQuotePreview(); }catch(e){}
+}
+
+function patchQuoteDropdownChangeEvents(){
+  const customerSel = document.getElementById("quoteCustomer");
+  const siteSel = document.getElementById("quoteSite");
+
+  if(customerSel && customerSel.dataset.finalCustomerLinked !== "1"){
+    customerSel.dataset.finalCustomerLinked = "1";
+    customerSel.addEventListener("change", ()=>{
+      populateQuoteGeneratorSiteDropdown(customerSel.value, "");
+      const c = window.customers.find(x=>String(x.id)===String(customerSel.value));
+      if(el("quoteSiteAddress")) el("quoteSiteAddress").value = c?.invoiceAddress || "";
+      if(el("quoteEmailAddress")) el("quoteEmailAddress").value = c?.invoiceEmail || "";
+      try{ renderQuotePreview(); }catch(e){}
+    });
+  }
+
+  if(siteSel && siteSel.dataset.finalSiteLinked !== "1"){
+    siteSel.dataset.finalSiteLinked = "1";
+    siteSel.addEventListener("change", ()=>{
+      const c = window.customers.find(x=>String(x.id)===String(document.getElementById("quoteCustomer")?.value||""));
+      const s = ((c&&c.sites)||[]).find(x=>String(x.id)===String(siteSel.value));
+      populateQuoteGeneratorContactDropdown(c?.id, s?.id);
+      if(el("quoteSiteAddress")) el("quoteSiteAddress").value = s?.address || c?.invoiceAddress || "";
+      if(el("quoteEmailAddress")) el("quoteEmailAddress").value = (s?.contacts&&s.contacts[0]?.email) || c?.invoiceEmail || "";
+      try{ renderQuotePreview(); }catch(e){}
+    });
+  }
+}
+
+// Override the previous master apply so it populates dropdown options first.
+function applyMasterJobToQuote(job){
+  if(!job) job = getActiveMasterJob ? getActiveMasterJob() : null;
+  if(!job) return;
+  setQuoteGeneratorFromMasterJob(job);
+}
+
+// Override create button function to ensure customer/site fully carries across.
+function createMasterQuoteAndOpen(){
+  const job = makeMasterJobFromRaiseQuote ? makeMasterJobFromRaiseQuote() : null;
+  if(!job) return;
+
+  setQuoteGeneratorFromMasterJob(job);
+
+  try{ if(typeof saveQuoteToRegister === "function") saveQuoteToRegister("Draft"); }catch(e){}
+
+  showTab("quoteprint");
+
+  setTimeout(()=>{
+    setQuoteGeneratorFromMasterJob(job);
+    patchQuoteDropdownChangeEvents();
+    if(typeof insertMasterWorkspaceNav === "function") insertMasterWorkspaceNav();
+  }, 150);
+}
+
+function finalWireQuoteGeneratorDropdowns(){
+  finalEnsureDefaultCustomersExist();
+  populateQuoteGeneratorCustomerDropdown(document.getElementById("quoteCustomer")?.value || "");
+  patchQuoteDropdownChangeEvents();
+
+  const active = getActiveMasterJob ? getActiveMasterJob() : null;
+  if(active) setQuoteGeneratorFromMasterJob(active);
+}
+
+setTimeout(finalWireQuoteGeneratorDropdowns, 300);
+setTimeout(finalWireQuoteGeneratorDropdowns, 1200);
+
+
+/* WGE FINAL WORKFLOW STABILITY PATCH 2026-05-23 */
+function wgeDefaults(){return [
+ {id:'cust_kensal',name:'Kensal',email:'accounts@kensal.com',invoiceEmail:'accounts@kensal.com',invoiceAddress:'Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR',sites:[
+  {id:'site_kensal_bps',name:'British Pepper and Spice',address:'Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR',contacts:[]},
+  {id:'site_kensal_barts',name:'Barts',address:'Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR',contacts:[]},
+  {id:'site_kensal_chivas',name:'Chivas Regal',address:'Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR',contacts:[]},
+  {id:'site_kensal_jd',name:'JD Sports',address:'Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR',contacts:[]},
+  {id:'site_kensal_lrs',name:'Lucozade Ribena Suntory',address:'Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR',contacts:[]},
+  {id:'site_kensal_mccormick',name:'McCormick',address:'Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR',contacts:[]}]},
+ {id:'cust_ashco',name:'ASHCO Building and Maintenance Services Ltd',email:'office@ashcoservices.co.uk; trevor@ashcoservices.co.uk',invoiceEmail:'office@ashcoservices.co.uk; trevor@ashcoservices.co.uk',invoiceAddress:'C/O The Demcom Stadium\nDownham Road\nEly\nCambs\nCB6 2SH',sites:[{id:'site_ashco_colindale',name:'Colindale',address:'C/O The Demcom Stadium\nDownham Road\nEly\nCambs\nCB6 2SH',contacts:[]}]},
+ {id:'cust_team',name:'Team Consulting Ltd',email:'Martin.bond@team-consulting.com',invoiceEmail:'Martin.bond@team-consulting.com',invoiceAddress:'Abbey Barns\nDuxford Road\nIckleton\nCambridge\nCB10 1SX',sites:[{id:'site_team_abbey',name:'Team Abbey Barns',address:'Abbey Barns\nDuxford Road\nIckleton\nCambridge\nCB10 1SX',contacts:[]}]},
+ {id:'cust_stamford',name:'Stamford Stone Company Ltd',email:'shelley@stamfordstone.co.uk',invoiceEmail:'shelley@stamfordstone.co.uk',invoiceAddress:'Stamford Stone Company Ltd\nSwaddywell Quarry\nStamford Road\nHelpston\nPeterborough\nPE6 7EL',sites:[{id:'site_stamford_hollywell',name:'Hollywell Quarry',address:'Swaddywell Quarry\nStamford Road\nHelpston\nPeterborough\nPE6 7EL',contacts:[]}]},
+ {id:'cust_mccormick',name:'McCormick',email:'AP_UK@mccormick.com',invoiceEmail:'AP_UK@mccormick.com',invoiceAddress:'McCormick\nAlwalton Hill\nPeterborough\nPE7 3HH',sites:[{id:'site_mccormick_pboro',name:'McCormick Peterborough',address:'McCormick\nAlwalton Hill\nPeterborough\nPE7 3HH',contacts:[]}]},
+ {id:'cust_princes',name:'Princes Group PLC',email:'ukaccountspayable@princes.co.uk',invoiceEmail:'ukaccountspayable@princes.co.uk',invoiceAddress:'Princes Group PLC\nRoyal Liver Building\nPier Head\nLiverpool\nL3 1NX',sites:[{id:'site_princes_longsutton',name:'Long Sutton',address:'Bridge Road\nLong Sutton\nSpalding\nLincolnshire\nPE12 9EQ',contacts:[{name:'David Pickaver',email:''}]}]}
+];}
+function wgeMergeDefaults(){
+  if(!Array.isArray(customers)) customers=[];
+  wgeDefaults().forEach(seed=>{
+    let c=customers.find(x=>String(x.id)===String(seed.id)||String(x.name||'').toLowerCase()===seed.name.toLowerCase());
+    if(!c){ c={id:seed.id,name:seed.name,email:seed.email,invoiceEmail:seed.invoiceEmail,invoiceAddress:seed.invoiceAddress,sites:[]}; customers.push(c); }
+    c.name=c.name||seed.name; c.email=c.email||seed.email; c.invoiceEmail=c.invoiceEmail||seed.invoiceEmail||seed.email; c.invoiceAddress=c.invoiceAddress||seed.invoiceAddress;
+    if(!Array.isArray(c.sites)) c.sites=[];
+    seed.sites.forEach(ss=>{
+      let s=c.sites.find(x=>String(x.id)===String(ss.id)||String(x.name||'').toLowerCase()===ss.name.toLowerCase());
+      if(!s) c.sites.push({...ss}); else {s.id=s.id||ss.id; s.address=s.address||ss.address; s.contacts=s.contacts||ss.contacts||[];}
+    });
+  });
+  try{saveAll();}catch(e){}
+}
+seedIfEmpty=function(){wgeMergeDefaults();};
+function wgeTypeForCustomer(c){const n=String(c?.name||'').toLowerCase(); return n.includes('ashco')?'ashco':n.includes('kensal')?'kensal':'standard';}
+function wgePopulateRaise(){
+  wgeMergeDefaults();
+  const cs=el('raiseQuoteCustomer')||el('workspaceCustomer'); const ss=el('raiseQuoteSite')||el('workspaceSite'); const ts=el('raiseQuoteType')||el('workspaceQuoteType');
+  if(cs){const old=cs.value; cs.innerHTML='<option value="">Select customer</option>'+customers.map(c=>`<option value="${c.id}">${safe(c.name)}</option>`).join(''); if(old&&customers.some(c=>String(c.id)===String(old))) cs.value=old;}
+  if(ss){const c=customers.find(c=>String(c.id)===String(cs?.value||'')); const old=ss.value; ss.innerHTML='<option value="">Select site</option>'+((c&&c.sites)||[]).map(s=>`<option value="${s.id}">${safe(s.name)}</option>`).join(''); if(old&&c&&(c.sites||[]).some(s=>String(s.id)===String(old))) ss.value=old; if(ts) ts.value=wgeTypeForCustomer(c);}
+}
+function wgePopulateQuoteCustomer(customerId,siteId){
+  wgeMergeDefaults();
+  const qc=el('quoteCustomer'); const qs=el('quoteSite'); const qct=el('quoteContact');
+  if(qc){qc.innerHTML='<option value="">Select customer</option>'+customers.map(c=>`<option value="${c.id}">${safe(c.name)}</option>`).join(''); if(customerId) qc.value=customerId;}
+  const c=customers.find(c=>String(c.id)===String(customerId||qc?.value||''));
+  if(qs){qs.innerHTML=((c&&c.sites&&c.sites.length)?'<option value="">Select site</option>':'<option value="">No sites</option>')+((c&&c.sites)||[]).map(s=>`<option value="${s.id}">${safe(s.name)}</option>`).join(''); if(siteId) qs.value=siteId;}
+  const s=((c&&c.sites)||[]).find(s=>String(s.id)===String(siteId||qs?.value||''));
+  if(qct){const contacts=(s&&s.contacts)||[]; qct.innerHTML=contacts.length?contacts.map((ct,i)=>`<option value="${i}">${safe(ct.name||'Contact')}${ct.email?' — '+safe(ct.email):''}</option>`).join(''):'<option value="">No site contact saved</option>';}
+  if(el('quoteSiteAddress')) el('quoteSiteAddress').value=(s&&s.address)||c?.invoiceAddress||'';
+  if(el('quoteEmailAddress')) el('quoteEmailAddress').value=(s&&s.contacts&&s.contacts[0]&&s.contacts[0].email)||c?.invoiceEmail||c?.email||'';
+}
+quoteCustomerObj=function(){return customers.find(c=>String(c.id)===String(el('quoteCustomer')?.value||''));};
+quoteSiteObj=function(){const c=quoteCustomerObj(); return (c?.sites||[]).find(s=>String(s.id)===String(el('quoteSite')?.value||''));};
+populateQuoteSite=function(){wgePopulateQuoteCustomer(el('quoteCustomer')?.value,'');};
+populateQuoteSiteAddress=function(){wgePopulateQuoteCustomer(el('quoteCustomer')?.value,el('quoteSite')?.value); try{renderQuotePreview();}catch(e){}};
+function wgeNextRef(owner){const prefix=String(owner||'').toLowerCase().includes('david')?'DG':'WB'; let refs=[]; try{refs=(quotes||[]).map(q=>String(q.quoteRef||''));}catch(e){} try{refs=refs.concat(JSON.parse(localStorage.getItem('wge_live_quote_register_v1')||'[]').map(q=>String(q.quoteRef||'')));}catch(e){} const nums=refs.map(r=>{const m=r.match(new RegExp('^'+prefix+'-?(\\d+)')); return m?Number(m[1]):0;}); return prefix+(Math.max(3999,...nums)+1);}
+function wgeCreateQuoteFromRaise(){
+  wgeMergeDefaults();
+  const owner=(el('raiseQuoteOwner')||el('workspaceOwner'))?.value||'Wayne Bonney';
+  const customerId=(el('raiseQuoteCustomer')||el('workspaceCustomer'))?.value||''; const siteId=(el('raiseQuoteSite')||el('workspaceSite'))?.value||'';
+  const c=customers.find(c=>String(c.id)===String(customerId)); const s=(c?.sites||[]).find(s=>String(s.id)===String(siteId));
+  if(!c){alert('Please select a customer first.'); return;} if(!s){alert('Please select a site first.'); return;}
+  const ref=wgeNextRef(owner); const type=wgeTypeForCustomer(c);
+  if(el('quoteRef')) el('quoteRef').value=ref; if(el('quotePreparedBy')) el('quotePreparedBy').value=owner; if(el('quoteOwnerSelect')) el('quoteOwnerSelect').value=owner; if(el('quoteTypeSelect')) el('quoteTypeSelect').value=type;
+  wgePopulateQuoteCustomer(c.id,s.id);
+  if(el('quoteProjectTitle')) el('quoteProjectTitle').value=s.name;
+  if(el('quoteNetPrice')) el('quoteNetPrice').value='0.00';
+  try{syncQuoteOwnerDetails();}catch(e){} try{renderQuotePreview();}catch(e){} try{saveQuoteToRegister('Draft');}catch(e){try{saveCurrentQuote('Draft');}catch(ee){}}
+  const master={id:'JOB-'+ref+'-'+Date.now(),quoteRef:ref,jobNumber:ref,status:'Quotation',owner,customerId:c.id,customer:c.name,invoiceAddress:c.invoiceAddress,invoiceEmail:c.invoiceEmail,siteId:s.id,site:s.name,siteAddress:s.address,siteContactEmail:(s.contacts&&s.contacts[0]&&s.contacts[0].email)||c.invoiceEmail,costingType:type,quote:{project:s.name,scope:'',netPrice:0},createdAt:new Date().toISOString()};
+  localStorage.setItem('wge_active_master_job',JSON.stringify(master)); const ms=JSON.parse(localStorage.getItem('wge_master_jobs')||'[]'); ms.unshift(master); localStorage.setItem('wge_master_jobs',JSON.stringify(ms));
+  showTab('quoteprint'); setTimeout(()=>{wgePopulateQuoteCustomer(c.id,s.id); try{renderQuotePreview();}catch(e){}},150);
+}
+function wgeWireFinal(){
+  wgePopulateRaise(); wgePopulateQuoteCustomer(el('quoteCustomer')?.value,el('quoteSite')?.value);
+  const rc=el('raiseQuoteCustomer')||el('workspaceCustomer'); const rs=el('raiseQuoteSite')||el('workspaceSite');
+  if(rc&&!rc.dataset.wgeFinal){rc.dataset.wgeFinal='1'; rc.addEventListener('change',()=>wgePopulateRaise());}
+  if(rs&&!rs.dataset.wgeFinal){rs.dataset.wgeFinal='1'; rs.addEventListener('change',()=>wgePopulateRaise());}
+  const qc=el('quoteCustomer'), qs=el('quoteSite');
+  if(qc&&!qc.dataset.wgeFinal){qc.dataset.wgeFinal='1'; qc.addEventListener('change',()=>wgePopulateQuoteCustomer(qc.value,''));}
+  if(qs&&!qs.dataset.wgeFinal){qs.dataset.wgeFinal='1'; qs.addEventListener('change',()=>wgePopulateQuoteCustomer(qc?.value,qs.value));}
+  document.querySelectorAll('button').forEach(b=>{if(String(b.textContent||'').toLowerCase().includes('create quote number')){b.onclick=null; if(!b.dataset.wgeCreateFinal){b.dataset.wgeCreateFinal='1'; b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();wgeCreateQuoteFromRaise();},true);}}});
+}
+setTimeout(wgeWireFinal,100); setTimeout(wgeWireFinal,600); setTimeout(wgeWireFinal,1500);
+
+
+/* WGE FINAL RAMS + PDF CLEANUP */
+function wgeActiveJob(){try{return JSON.parse(localStorage.getItem('wge_active_master_job')||'null')}catch(e){return null}}
+function wgePullRams(){const j=wgeActiveJob(); if(!j)return; if(el('ramsRef'))el('ramsRef').value='RAMS-'+j.quoteRef; if(el('ramsProject'))el('ramsProject').value=el('quoteProjectTitle')?.value||j.site; if(el('ramsCustomer'))el('ramsCustomer').value=j.customer; if(el('ramsSite'))el('ramsSite').value=j.site; if(el('ramsSiteAddress'))el('ramsSiteAddress').value=j.siteAddress; if(el('ramsScope'))el('ramsScope').value=el('quoteScope')?.value||el('quoteRoughScope')?.value||''; try{generateSimpleRamsPreview()}catch(e){}}
+function wgeWireRams(){if(el('ramsPullQuoteBtn'))el('ramsPullQuoteBtn').onclick=wgePullRams;}
+setTimeout(wgeWireRams,500);
+
+
+/* TIMESHEET COST LINK EXPORT */
+const WGE_DEFAULT_LABOUR_RATES = {
+  A: 49,
+  B: 57.53,
+  C: 66.15
+};
+
+function wgeRatesFromSettings(){
+  try{
+    const saved = JSON.parse(localStorage.getItem("wge_labour_rates")||"null");
+    if(saved && typeof saved === "object") return {...WGE_DEFAULT_LABOUR_RATES, ...saved};
+  }catch(e){}
+  return {...WGE_DEFAULT_LABOUR_RATES};
+}
+
+function normaliseJobForTimesheet(job){
+  const rates = wgeRatesFromSettings();
+  return {
+    id: String(job.id || job.jobNumber || job.quoteRef || Date.now()),
+    job_number: job.jobNumber || job.quoteRef || "",
+    quote_ref: job.quoteRef || job.jobNumber || "",
+    customer: job.customer || "",
+    site: job.site || "",
+    description: job.description || job.quote?.project || job.project || job.site || "",
+    status: job.status || "Live",
+    order_number: job.orderNumber || job.poNumber || "",
+    owner: job.owner || "",
+    folder_path: job.folderPath || "",
+    quote_value: Number(job.quoteValue || job.quote?.netPrice || job.costing?.total || 0),
+    rate_a: Number(rates.A || 0),
+    rate_b: Number(rates.B || 0),
+    rate_c: Number(rates.C || 0),
+    updated_at: new Date().toISOString()
+  };
+}
+
+function saveLiveJobsForTimesheetFallback(){
+  let list = [];
+  try{
+    const master = JSON.parse(localStorage.getItem("wge_master_jobs")||"[]");
+    list = list.concat(master.filter(j=>String(j.status||"").toLowerCase().includes("live")).map(normaliseJobForTimesheet));
+  }catch(e){}
+  try{
+    if(Array.isArray(window.jobs)){
+      list = list.concat(window.jobs.filter(j=>String(j.status||"").toLowerCase().includes("live")).map(normaliseJobForTimesheet));
+    }
+  }catch(e){}
+  const unique = [];
+  const seen = new Set();
+  list.forEach(j=>{
+    const key = j.id || j.job_number;
+    if(!seen.has(key)){
+      seen.add(key);
+      unique.push(j);
+    }
+  });
+  localStorage.setItem("wge_live_jobs_cache", JSON.stringify(unique));
+}
+
+async function syncLiveJobsToTimesheet(){
+  saveLiveJobsForTimesheetFallback();
+  try{
+    if(typeof supabaseClient === "undefined" || !supabaseClient) return false;
+    const rows = JSON.parse(localStorage.getItem("wge_live_jobs_cache")||"[]");
+    for(const row of rows){
+      await supabaseClient.from("wge_live_jobs").upsert(row, {onConflict:"id"});
+    }
+    return true;
+  }catch(e){
+    console.warn("Live job sync failed", e);
+    return false;
+  }
+}
+
+// Wrap live job conversion if functions exist
+setTimeout(()=>{
+  try{
+    if(typeof convertActiveMasterToLiveJob === "function" && !window.__wrappedConvertActiveMasterToLiveJob){
+      window.__wrappedConvertActiveMasterToLiveJob = true;
+      const old = convertActiveMasterToLiveJob;
+      window.convertActiveMasterToLiveJob = function(){
+        old();
+        setTimeout(syncLiveJobsToTimesheet, 200);
+      };
+    }
+  }catch(e){}
+  syncLiveJobsToTimesheet();
+}, 800);
+
 document.addEventListener("DOMContentLoaded",()=>{loadAll();seedIfEmpty();document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));document.querySelectorAll("[data-user]").forEach(b=>b.addEventListener("click",()=>{currentUser=b.dataset.user;el("currentUserLabel").textContent=currentUser==="DG"?"David Job Schedule":currentUser==="MASTER"?"Master View":"Wayne Job Schedule";initialiseQuoteEnquiry();if(el("saveQuoteBtn"))el("saveQuoteBtn").addEventListener("click",()=>saveCurrentQuote());
 if(el("newQuoteBtn"))el("newQuoteBtn").addEventListener("click",newBlankQuote);
 if(el("quoteSearch"))el("quoteSearch").addEventListener("input",renderQuoteRegister);
@@ -5592,7 +6015,7 @@ if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{tr
 if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
 if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
 if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();wireForceStartHereDropdowns();finalWireCreateQuoteButton();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
+syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();wireForceStartHereDropdowns();finalWireCreateQuoteButton();wireMasterWorkflow();finalWireQuoteGeneratorDropdowns();wgeWireFinal();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
 if(el("quoteContact"))el("quoteContact").addEventListener("change",()=>{populateQuoteContacts();renderQuotePreview()});el("jobCustomer").addEventListener("change",populateJobSite);el("jobOwner").addEventListener("change",renderJobs);el("addCustomerBtn").addEventListener("click",addCustomer);if(el("seedDefaultCustomersBtn"))el("seedDefaultCustomersBtn").addEventListener("click",seedWGEDefaultCustomers);el("addSiteBtn").addEventListener("click",addSite);if(el("addSiteContactBtn"))el("addSiteContactBtn").addEventListener("click",addSiteContact);
 if(el("deleteSiteBtn"))el("deleteSiteBtn").addEventListener("click",deleteSelectedSite);
 if(el("deleteCustomerBtn"))el("deleteCustomerBtn").addEventListener("click",deleteSelectedCustomer);if(el("selectJobFolderBtn"))el("selectJobFolderBtn").addEventListener("click",selectJobFolder);
@@ -5646,7 +6069,7 @@ if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{tr
 if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
 if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
 if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();wireForceStartHereDropdowns();finalWireCreateQuoteButton();renderAll()})
+syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();wireForceStartHereDropdowns();finalWireCreateQuoteButton();wireMasterWorkflow();finalWireQuoteGeneratorDropdowns();wgeWireFinal();renderAll()})
 </script>
 
 <script>
