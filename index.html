@@ -5,82 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Will Guy Electrical Job Schedule</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
-/* ABSOLUTE SITE DROPDOWN FIX */
-function forcePopulateSitesNow(){
-  const customerSel =
-    document.getElementById("raiseQuoteCustomer") ||
-    document.querySelector('[id*="Customer"]');
-
-  const siteSel =
-    document.getElementById("raiseQuoteSite") ||
-    document.querySelector('[id*="Site"]');
-
-  if(!customerSel || !siteSel) return;
-
-  const customerName = (customerSel.options[customerSel.selectedIndex]?.text || customerSel.value || "").toLowerCase();
-
-  const sites = {
-    "kensal":[
-      "British Pepper and Spice",
-      "Barts",
-      "Chivas Regal",
-      "JD Sports",
-      "Lucozade Ribena Suntory",
-      "McCormick"
-    ],
-    "ashco building and maintenance services ltd":[
-      "Colindale"
-    ],
-    "team consulting ltd":[
-      "Team Abbey Barns"
-    ],
-    "stamford stone company ltd":[
-      "Hollywell Quarry"
-    ],
-    "mccormick":[
-      "McCormick Peterborough"
-    ],
-    "princes group plc":[
-      "Long Sutton"
-    ]
-  };
-
-  let matched = [];
-  Object.keys(sites).forEach(key=>{
-    if(customerName.includes(key)){
-      matched = sites[key];
-    }
-  });
-
-  siteSel.innerHTML = '<option value="">Select site</option>' +
-    matched.map(s=>`<option value="${s}">${s}</option>`).join("");
-
-  if(customerName.includes("kensal")){
-    const costing =
-      document.getElementById("raiseQuoteType") ||
-      document.getElementById("workspaceQuoteType");
-    if(costing) costing.value = "kensal";
-  }
-
-  if(customerName.includes("ashco")){
-    const costing =
-      document.getElementById("raiseQuoteType") ||
-      document.getElementById("workspaceQuoteType");
-    if(costing) costing.value = "ashco";
-  }
-}
-
-setTimeout(forcePopulateSitesNow,100);
-setTimeout(forcePopulateSitesNow,500);
-setTimeout(forcePopulateSitesNow,1500);
-
-document.addEventListener("change",function(e){
-  const id = String(e.target.id || "").toLowerCase();
-  if(id.includes("customer")){
-    setTimeout(forcePopulateSitesNow,50);
-  }
-});
-
 </script>
 <style>
 :root{--blue:#0f7fb7;--blue2:#075d8d;--bg:#f3f7fb;--card:#fff;--text:#102033;--muted:#64748b;--border:#dbe5ef;--green:#0e9f6e;--red:#dc2626;--amber:#d97706}
@@ -11533,6 +11457,125 @@ document.addEventListener("DOMContentLoaded", function(){
 
   });
 
+})();
+</script>
+
+
+<script>
+/* FINAL OVERRIDE: START HERE SITE DROPDOWN FIX - RUNS LAST */
+(function(){
+  const SITE_MAP = {
+    "kensal": ["British Pepper and Spice","Barts","Chivas Regal","JD Sports","Lucozade Ribena Suntory","McCormick"],
+    "ashco": ["Colindale"],
+    "team": ["Team Abbey Barns"],
+    "stamford": ["Hollywell Quarry"],
+    "mccormick": ["McCormick Peterborough"],
+    "princes": ["Long Sutton"]
+  };
+
+  function q(sel){ return document.querySelector(sel); }
+
+  function customerSelect(){
+    return document.getElementById("raiseQuoteCustomer")
+        || document.getElementById("workspaceCustomer")
+        || [...document.querySelectorAll("select")].find(s => {
+             const label = s.closest("div")?.querySelector("label")?.textContent?.toLowerCase() || "";
+             const title = s.closest("div")?.querySelector("strong")?.textContent?.toLowerCase() || "";
+             return label.includes("customer") || title.includes("customer");
+           });
+  }
+
+  function siteSelect(){
+    return document.getElementById("raiseQuoteSite")
+        || document.getElementById("workspaceSite")
+        || [...document.querySelectorAll("select")].find(s => {
+             const label = s.closest("div")?.querySelector("label")?.textContent?.toLowerCase() || "";
+             const title = s.closest("div")?.querySelector("strong")?.textContent?.toLowerCase() || "";
+             return label === "site" || title.includes("site");
+           });
+  }
+
+  function costingSelect(){
+    return document.getElementById("raiseQuoteType")
+        || document.getElementById("workspaceQuoteType")
+        || [...document.querySelectorAll("select")].find(s => {
+             const label = s.closest("div")?.querySelector("label")?.textContent?.toLowerCase() || "";
+             const title = s.closest("div")?.querySelector("strong")?.textContent?.toLowerCase() || "";
+             return label.includes("auto-selected") || title.includes("costing");
+           });
+  }
+
+  function selectedCustomerText(){
+    const c = customerSelect();
+    if(!c) return "";
+    return String(c.options[c.selectedIndex]?.textContent || c.value || "").toLowerCase();
+  }
+
+  function sitesForCustomer(){
+    const text = selectedCustomerText();
+    if(text.includes("kensal")) return SITE_MAP.kensal;
+    if(text.includes("ashco")) return SITE_MAP.ashco;
+    if(text.includes("team")) return SITE_MAP.team;
+    if(text.includes("stamford")) return SITE_MAP.stamford;
+    if(text.includes("princes")) return SITE_MAP.princes;
+    if(text.includes("mccormick")) return SITE_MAP.mccormick;
+    return [];
+  }
+
+  function setCosting(){
+    const type = costingSelect();
+    if(!type) return;
+    const text = selectedCustomerText();
+    if(text.includes("kensal")) type.value = "kensal";
+    else if(text.includes("ashco")) type.value = "ashco";
+    else type.value = "standard";
+  }
+
+  window.WGE_forceStartHereSites = function(){
+    const s = siteSelect();
+    if(!s) return;
+
+    const previous = s.value;
+    const list = sitesForCustomer();
+
+    s.innerHTML = '<option value="">Select site</option>' + list.map(site => {
+      const selected = previous === site ? ' selected' : '';
+      return '<option value="'+site.replace(/"/g,'&quot;')+'"'+selected+'>'+site+'</option>';
+    }).join("");
+
+    setCosting();
+  };
+
+  function wire(){
+    const c = customerSelect();
+    const s = siteSelect();
+
+    if(c && c.dataset.wgeFinalSiteFix !== "1"){
+      c.dataset.wgeFinalSiteFix = "1";
+      c.addEventListener("change", () => setTimeout(window.WGE_forceStartHereSites, 10), true);
+      c.addEventListener("input", () => setTimeout(window.WGE_forceStartHereSites, 10), true);
+    }
+
+    if(s && s.dataset.wgeFinalSiteFix !== "1"){
+      s.dataset.wgeFinalSiteFix = "1";
+      s.addEventListener("focus", window.WGE_forceStartHereSites, true);
+      s.addEventListener("mousedown", window.WGE_forceStartHereSites, true);
+      s.addEventListener("touchstart", window.WGE_forceStartHereSites, true);
+      s.addEventListener("click", window.WGE_forceStartHereSites, true);
+    }
+
+    window.WGE_forceStartHereSites();
+  }
+
+  document.addEventListener("DOMContentLoaded", wire);
+  document.addEventListener("change", function(e){
+    if(e.target === customerSelect()) setTimeout(window.WGE_forceStartHereSites, 10);
+  }, true);
+
+  setTimeout(wire, 100);
+  setTimeout(wire, 500);
+  setTimeout(wire, 1200);
+  setTimeout(wire, 2500);
 })();
 </script>
 
