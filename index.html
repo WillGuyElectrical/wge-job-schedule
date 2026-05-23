@@ -1157,6 +1157,21 @@ z-index:0;
 .customerDbRow:last-child{border-bottom:0}
 .customerDbSmall{font-size:13px;color:var(--muted)}
 
+
+/* FINAL START HERE BUTTON SPACING */
+.startHerePanelActual div[style*="height:14px"],
+.startHerePanelActual div[style*="height:12px"]{
+  height:auto!important;
+  min-height:58px!important;
+  align-items:center!important;
+  margin-top:12px!important;
+}
+.startHerePanelActual .btn,
+.startHerePanelActual .btn2{
+  margin-top:8px!important;
+  margin-bottom:8px!important;
+}
+
 </style>
 </head>
 <body>
@@ -5331,6 +5346,213 @@ setTimeout(wireForceStartHereDropdowns, 200);
 setTimeout(wireForceStartHereDropdowns, 800);
 setTimeout(wireForceStartHereDropdowns, 1500);
 
+
+/* FINAL CREATE QUOTE BUTTON WORKFLOW FIX */
+function finalGetRaiseCustomer(){
+  const custSel = document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
+  const id = custSel ? custSel.value : "";
+  return (window.customers || []).find(c => String(c.id) === String(id));
+}
+
+function finalGetRaiseSite(customer){
+  const siteSel = document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite");
+  const id = siteSel ? siteSel.value : "";
+  return ((customer && customer.sites) || []).find(s => String(s.id) === String(id));
+}
+
+function finalOwnerName(){
+  return (document.getElementById("raiseQuoteOwner") || document.getElementById("workspaceOwner"))?.value || "Wayne Bonney";
+}
+
+function finalQuoteType(customer){
+  const typeSel = document.getElementById("raiseQuoteType") || document.getElementById("workspaceQuoteType");
+  if(typeSel && typeSel.value) return typeSel.value;
+  const n = String(customer?.name || "").toLowerCase();
+  if(n.includes("ashco")) return "ashco";
+  if(n.includes("kensal")) return "kensal";
+  return "standard";
+}
+
+function finalQuotePrefix(){
+  return finalOwnerName().toLowerCase().includes("david") ? "DG" : "WB";
+}
+
+function finalNextQuoteRef(){
+  const prefix = finalQuotePrefix();
+  let refs = [];
+
+  try{
+    if(typeof loadQuoteRegister === "function"){
+      refs = refs.concat((loadQuoteRegister() || []).map(q => String(q.quoteRef || "")));
+    }
+  }catch(e){}
+
+  try{
+    if(Array.isArray(window.quotes)){
+      refs = refs.concat(window.quotes.map(q => String(q.quoteRef || "")));
+    }
+  }catch(e){}
+
+  const nums = refs.map(r => {
+    const m = String(r).match(new RegExp("^" + prefix + "-?(\\d+)"));
+    return m ? Number(m[1]) : 0;
+  });
+
+  return prefix + (Math.max(3999, ...nums) + 1);
+}
+
+function finalSetSelectByTextOrId(selectId, idValue, textValue){
+  const sel = document.getElementById(selectId);
+  if(!sel) return false;
+
+  let opt = [...sel.options].find(o => String(o.value) === String(idValue));
+  if(!opt && textValue){
+    opt = [...sel.options].find(o => String(o.textContent || "").trim().toLowerCase() === String(textValue).trim().toLowerCase());
+  }
+
+  if(opt){
+    sel.value = opt.value;
+    return true;
+  }
+
+  return false;
+}
+
+function finalOpenTab(id){
+  try{
+    if(typeof showTab === "function"){
+      showTab(id);
+      return;
+    }
+  }catch(e){}
+
+  document.querySelectorAll("section").forEach(s => s.classList.add("hidden"));
+  const sec = document.getElementById(id);
+  if(sec) sec.classList.remove("hidden");
+}
+
+function finalSaveQuoteDraft(){
+  try{
+    if(typeof saveQuoteToRegister === "function"){
+      saveQuoteToRegister("Draft");
+      return;
+    }
+  }catch(e){}
+
+  try{
+    if(typeof saveCurrentQuote === "function"){
+      saveCurrentQuote("Draft");
+      return;
+    }
+  }catch(e){}
+}
+
+function finalCreateQuoteNumberAndOpenQuote(){
+  try{
+    if(typeof forceMergeDefaultCustomers === "function") forceMergeDefaultCustomers();
+    if(typeof forcePopulateStartHereCustomers === "function") forcePopulateStartHereCustomers();
+  }catch(e){}
+
+  const customer = finalGetRaiseCustomer();
+  const site = finalGetRaiseSite(customer);
+  const owner = finalOwnerName();
+  const type = finalQuoteType(customer);
+
+  if(!customer){
+    alert("Please select a customer first.");
+    return;
+  }
+
+  if(!site){
+    alert("Please select a site first.");
+    return;
+  }
+
+  const ref = finalNextQuoteRef();
+
+  // Push selected values into the actual quote generator.
+  if(document.getElementById("quoteRef")) document.getElementById("quoteRef").value = ref;
+  if(document.getElementById("quotePreparedBy")) document.getElementById("quotePreparedBy").value = owner;
+  if(document.getElementById("quoteOwnerSelect")) document.getElementById("quoteOwnerSelect").value = owner;
+
+  // Customer / site dropdowns in quote generator may use either ids or text labels.
+  finalSetSelectByTextOrId("quoteCustomer", customer.id, customer.name);
+
+  try{
+    if(typeof populateQuoteSite === "function") populateQuoteSite();
+  }catch(e){}
+
+  finalSetSelectByTextOrId("quoteSite", site.id, site.name);
+
+  if(document.getElementById("quoteSiteAddress")){
+    document.getElementById("quoteSiteAddress").value = site.address || customer.invoiceAddress || "";
+  }
+
+  if(document.getElementById("quoteEmailAddress")){
+    document.getElementById("quoteEmailAddress").value = site.contactEmail || customer.invoiceEmail || "";
+  }
+
+  if(document.getElementById("quoteTypeSelect")) document.getElementById("quoteTypeSelect").value = type;
+  if(document.getElementById("quoteNetPrice")) document.getElementById("quoteNetPrice").value = "0.00";
+
+  try{
+    if(typeof populateQuoteSiteAddress === "function") populateQuoteSiteAddress();
+  }catch(e){}
+
+  try{
+    if(typeof syncQuoteOwnerDetails === "function") syncQuoteOwnerDetails();
+  }catch(e){}
+
+  try{
+    if(typeof renderQuotePreview === "function") renderQuotePreview();
+  }catch(e){}
+
+  finalSaveQuoteDraft();
+
+  try{
+    localStorage.setItem("wge_active_quote_workspace", JSON.stringify({
+      quoteRef: ref,
+      owner: owner,
+      customer: customer.name || "",
+      site: site.name || "",
+      quoteType: type,
+      status: "Draft",
+      createdAt: new Date().toISOString()
+    }));
+  }catch(e){}
+
+  finalOpenTab("quoteprint");
+
+  setTimeout(function(){
+    const msg = "Quote " + ref + " created for " + (customer.name || "customer") + " / " + (site.name || "site") + ".";
+    const status = document.getElementById("quoteFlowStatus") || document.getElementById("quoteStorageMessage");
+    if(status) status.textContent = msg;
+  }, 100);
+}
+
+function finalWireCreateQuoteButton(){
+  const buttons = [
+    document.getElementById("raiseQuoteCreateBtn"),
+    document.getElementById("createQuoteNumberBtn"),
+    ...[...document.querySelectorAll("button")].filter(b => String(b.textContent || "").toLowerCase().includes("create quote number"))
+  ].filter(Boolean);
+
+  buttons.forEach(btn => {
+    if(btn.dataset.finalCreateQuoteFixed === "1") return;
+    btn.dataset.finalCreateQuoteFixed = "1";
+    btn.onclick = finalCreateQuoteNumberAndOpenQuote;
+    btn.addEventListener("click", function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      finalCreateQuoteNumberAndOpenQuote();
+    }, true);
+  });
+}
+
+setTimeout(finalWireCreateQuoteButton, 100);
+setTimeout(finalWireCreateQuoteButton, 500);
+setTimeout(finalWireCreateQuoteButton, 1200);
+
 document.addEventListener("DOMContentLoaded",()=>{loadAll();seedIfEmpty();document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));document.querySelectorAll("[data-user]").forEach(b=>b.addEventListener("click",()=>{currentUser=b.dataset.user;el("currentUserLabel").textContent=currentUser==="DG"?"David Job Schedule":currentUser==="MASTER"?"Master View":"Wayne Job Schedule";initialiseQuoteEnquiry();if(el("saveQuoteBtn"))el("saveQuoteBtn").addEventListener("click",()=>saveCurrentQuote());
 if(el("newQuoteBtn"))el("newQuoteBtn").addEventListener("click",newBlankQuote);
 if(el("quoteSearch"))el("quoteSearch").addEventListener("input",renderQuoteRegister);
@@ -5370,7 +5592,7 @@ if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{tr
 if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
 if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
 if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();wireForceStartHereDropdowns();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
+syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();wireForceStartHereDropdowns();finalWireCreateQuoteButton();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
 if(el("quoteContact"))el("quoteContact").addEventListener("change",()=>{populateQuoteContacts();renderQuotePreview()});el("jobCustomer").addEventListener("change",populateJobSite);el("jobOwner").addEventListener("change",renderJobs);el("addCustomerBtn").addEventListener("click",addCustomer);if(el("seedDefaultCustomersBtn"))el("seedDefaultCustomersBtn").addEventListener("click",seedWGEDefaultCustomers);el("addSiteBtn").addEventListener("click",addSite);if(el("addSiteContactBtn"))el("addSiteContactBtn").addEventListener("click",addSiteContact);
 if(el("deleteSiteBtn"))el("deleteSiteBtn").addEventListener("click",deleteSelectedSite);
 if(el("deleteCustomerBtn"))el("deleteCustomerBtn").addEventListener("click",deleteSelectedCustomer);if(el("selectJobFolderBtn"))el("selectJobFolderBtn").addEventListener("click",selectJobFolder);
@@ -5424,7 +5646,7 @@ if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{tr
 if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
 if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
 if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();wireForceStartHereDropdowns();renderAll()})
+syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();wireForceStartHereDropdowns();finalWireCreateQuoteButton();renderAll()})
 </script>
 
 <script>
