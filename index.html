@@ -1212,6 +1212,54 @@ z-index:0;
 /* WGE FINAL PRINT PDF CLEANUP */
 @media print{body{margin:0!important;background:#fff!important}.top,.tabs,.quoteNoPrint,.masterWorkspaceNav,.wgeLoggedInBar{display:none!important}.wrap{max-width:none!important;margin:0!important;padding:0!important}.card{box-shadow:none!important;border:0!important}.quotePage,.ramsPage,#quotePreview,#ramsPreview{margin-top:0!important;break-before:auto!important;page-break-before:auto!important}}
 
+
+/* CLEAN START HERE SITE PICKER */
+.wgeSiteButtonGrid{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+.wgeSitePickBtn{
+  background:#e8f5fc;
+  color:#084e7a;
+  border:1px solid #dbe5ef;
+  border-radius:999px;
+  padding:9px 12px;
+  font-weight:900;
+}
+.wgeSitePickBtn.active{
+  background:#0f6ea8;
+  color:white;
+  border-color:#0f6ea8;
+}
+.wgeSitePickerHelp{
+  color:#64748b;
+  font-size:13px;
+  margin-top:8px;
+}
+
+
+/* WGE FINAL STABILITY LAYER */
+.wgeDropboxPanel{
+  background:#f8fafc;
+  border:1px solid #dbe5ef;
+  border-radius:16px;
+  padding:12px;
+  margin:12px 0;
+}
+.wgeDropboxActions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.wgeStatusNote{
+  margin-top:8px;
+  color:#64748b;
+  font-size:13px;
+}
+
 </style>
 </head>
 <body>
@@ -5978,221 +6026,6 @@ setTimeout(()=>{
 }, 800);
 
 
-/* START HERE CUSTOMER -> SITE DROPDOWN HARD FIX */
-const WGE_START_HERE_CUSTOMERS_FIXED = [
-  {id:"cust_kensal",name:"Kensal",invoiceAddress:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR",invoiceEmail:"accounts@kensal.com",sites:[
-    {id:"site_kensal_bps",name:"British Pepper and Spice",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR"},
-    {id:"site_kensal_barts",name:"Barts",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR"},
-    {id:"site_kensal_chivas",name:"Chivas Regal",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR"},
-    {id:"site_kensal_jd",name:"JD Sports",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR"},
-    {id:"site_kensal_lrs",name:"Lucozade Ribena Suntory",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR"},
-    {id:"site_kensal_mccormick",name:"McCormick",address:"Kensal Handling Systems Ltd\nPresident Way\nLuton\nLU2 9NR"}
-  ]},
-  {id:"cust_ashco",name:"ASHCO Building and Maintenance Services Ltd",invoiceAddress:"C/O The Demcom Stadium\nDownham Road\nEly\nCambs\nCB6 2SH",invoiceEmail:"office@ashcoservices.co.uk; trevor@ashcoservices.co.uk",sites:[
-    {id:"site_ashco_colindale",name:"Colindale",address:"C/O The Demcom Stadium\nDownham Road\nEly\nCambs\nCB6 2SH"}
-  ]},
-  {id:"cust_team",name:"Team Consulting Ltd",invoiceAddress:"Abbey Barns\nDuxford Road\nIckleton\nCambridge\nCB10 1SX",invoiceEmail:"Martin.bond@team-consulting.com",sites:[
-    {id:"site_team_abbey",name:"Team Abbey Barns",address:"Abbey Barns\nDuxford Road\nIckleton\nCambridge\nCB10 1SX"}
-  ]},
-  {id:"cust_stamford",name:"Stamford Stone Company Ltd",invoiceAddress:"Stamford Stone Company Ltd\nSwaddywell Quarry\nStamford Road\nHelpston\nPeterborough\nPE6 7EL",invoiceEmail:"shelley@stamfordstone.co.uk",sites:[
-    {id:"site_stamford_hollywell",name:"Hollywell Quarry",address:"Swaddywell Quarry\nStamford Road\nHelpston\nPeterborough\nPE6 7EL"}
-  ]},
-  {id:"cust_mccormick",name:"McCormick",invoiceAddress:"McCormick\nAlwalton Hill\nPeterborough\nPE7 3HH",invoiceEmail:"AP_UK@mccormick.com",sites:[
-    {id:"site_mccormick_pboro",name:"McCormick Peterborough",address:"McCormick\nAlwalton Hill\nPeterborough\nPE7 3HH"}
-  ]},
-  {id:"cust_princes",name:"Princes Group PLC",invoiceAddress:"Princes Group PLC\nRoyal Liver Building\nPier Head\nLiverpool\nL3 1NX",invoiceEmail:"ukaccountspayable@princes.co.uk",sites:[
-    {id:"site_princes_longsutton",name:"Long Sutton",address:"Bridge Road\nLong Sutton\nSpalding\nLincolnshire\nPE12 9EQ",contacts:[{name:"David Pickaver",email:""}]}
-  ]}
-];
-
-function wgeStartHereMergeCustomers(){
-  if(!Array.isArray(window.customers)) window.customers = [];
-  WGE_START_HERE_CUSTOMERS_FIXED.forEach(seed=>{
-    let c = window.customers.find(x => String(x.id)===String(seed.id) || String(x.name||"").toLowerCase()===seed.name.toLowerCase());
-    if(!c){
-      c = {id:seed.id,name:seed.name,invoiceAddress:seed.invoiceAddress,invoiceEmail:seed.invoiceEmail,sites:[]};
-      window.customers.push(c);
-    }
-    c.id = seed.id;
-    c.name = c.name || seed.name;
-    c.invoiceAddress = c.invoiceAddress || seed.invoiceAddress;
-    c.invoiceEmail = c.invoiceEmail || seed.invoiceEmail;
-    if(!Array.isArray(c.sites)) c.sites = [];
-    seed.sites.forEach(site=>{
-      let s = c.sites.find(x => String(x.id)===String(site.id) || String(x.name||"").toLowerCase()===site.name.toLowerCase());
-      if(!s) c.sites.push({...site});
-      else {
-        s.id = site.id;
-        s.address = s.address || site.address;
-        s.contacts = s.contacts || site.contacts || [];
-      }
-    });
-  });
-  try{ saveAll(); }catch(e){}
-}
-
-function wgeGetStartCustomerSelect(){
-  return document.getElementById("raiseQuoteCustomer") || document.getElementById("workspaceCustomer");
-}
-function wgeGetStartSiteSelect(){
-  return document.getElementById("raiseQuoteSite") || document.getElementById("workspaceSite");
-}
-function wgeGetStartTypeSelect(){
-  return document.getElementById("raiseQuoteType") || document.getElementById("workspaceQuoteType");
-}
-
-function wgePopulateStartCustomersFixed(){
-  wgeStartHereMergeCustomers();
-  const sel = wgeGetStartCustomerSelect();
-  if(!sel) return;
-  const old = sel.value;
-  sel.innerHTML = '<option value="">Select customer</option>' + 
-    WGE_START_HERE_CUSTOMERS_FIXED.map(c=>`<option value="${c.id}">${c.name}</option>`).join("");
-  if(old && WGE_START_HERE_CUSTOMERS_FIXED.some(c=>String(c.id)===String(old))) sel.value = old;
-  wgePopulateStartSitesFixed();
-}
-
-function wgePopulateStartSitesFixed(){
-  const custSel = wgeGetStartCustomerSelect();
-  const siteSel = wgeGetStartSiteSelect();
-  const typeSel = wgeGetStartTypeSelect();
-  if(!custSel || !siteSel) return;
-
-  const selectedCustomer = WGE_START_HERE_CUSTOMERS_FIXED.find(c=>String(c.id)===String(custSel.value||""));
-  const old = siteSel.value;
-
-  siteSel.innerHTML = '<option value="">Select site</option>' + 
-    ((selectedCustomer && selectedCustomer.sites) || []).map(s=>`<option value="${s.id}">${s.name}</option>`).join("");
-
-  if(old && selectedCustomer && selectedCustomer.sites.some(s=>String(s.id)===String(old))) siteSel.value = old;
-
-  if(typeSel){
-    const n = String(selectedCustomer?.name || "").toLowerCase();
-    typeSel.value = n.includes("ashco") ? "ashco" : n.includes("kensal") ? "kensal" : "standard";
-  }
-}
-
-function wgeWireStartHereSiteFix(){
-  wgePopulateStartCustomersFixed();
-  const custSel = wgeGetStartCustomerSelect();
-  const siteSel = wgeGetStartSiteSelect();
-
-  if(custSel){
-    custSel.onchange = wgePopulateStartSitesFixed;
-    custSel.addEventListener("change", wgePopulateStartSitesFixed);
-  }
-  if(siteSel){
-    siteSel.addEventListener("change", wgePopulateStartSitesFixed);
-  }
-}
-
-// Re-run after app renders and when Start Here is opened.
-setTimeout(wgeWireStartHereSiteFix, 100);
-setTimeout(wgeWireStartHereSiteFix, 500);
-setTimeout(wgeWireStartHereSiteFix, 1200);
-
-const oldShowTabForStartSites = typeof showTab === "function" ? showTab : null;
-function showTab(id){
-  if(oldShowTabForStartSites) oldShowTabForStartSites(id);
-  if(id==="raisequote" || id==="quoteWorkspace"){
-    setTimeout(wgeWireStartHereSiteFix, 50);
-  }
-}
-
-document.addEventListener("DOMContentLoaded",()=>{loadAll();seedIfEmpty();document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));document.querySelectorAll("[data-user]").forEach(b=>b.addEventListener("click",()=>{currentUser=b.dataset.user;el("currentUserLabel").textContent=currentUser==="DG"?"David Job Schedule":currentUser==="MASTER"?"Master View":"Wayne Job Schedule";initialiseQuoteEnquiry();if(el("saveQuoteBtn"))el("saveQuoteBtn").addEventListener("click",()=>saveCurrentQuote());
-if(el("newQuoteBtn"))el("newQuoteBtn").addEventListener("click",newBlankQuote);
-if(el("quoteSearch"))el("quoteSearch").addEventListener("input",renderQuoteRegister);
-if(el("quoteStatusFilter"))el("quoteStatusFilter").addEventListener("change",renderQuoteRegister);loadCalc();
-if(el("calcRateA"))el("calcRateA").addEventListener("input",updateCalcRates);
-if(el("calcRateB"))el("calcRateB").addEventListener("input",updateCalcRates);
-if(el("calcRateC"))el("calcRateC").addEventListener("input",updateCalcRates);
-if(el("calcMarkup"))el("calcMarkup").addEventListener("change",updateCalcMarkup);
-if(el("addCalcLabourRow"))el("addCalcLabourRow").addEventListener("click",addCalcLabour);
-if(el("addCalcMaterialRow"))el("addCalcMaterialRow").addEventListener("click",addCalcMaterial);
-if(el("sendCalcToQuoteBtn"))el("sendCalcToQuoteBtn").addEventListener("click",sendCalcToQuote);
-if(el("saveCalcBtn"))el("saveCalcBtn").addEventListener("click",()=>{saveCalc();alert("Calculation saved.");});
-if(el("clearCalcBtn"))el("clearCalcBtn").addEventListener("click",clearCalc);seedWGEDefaultCustomersOnce();loadAshcoCosting();
-if(el("ashcoDefaultLabourRate"))el("ashcoDefaultLabourRate").addEventListener("input",updateAshcoSettings);
-if(el("ashcoMarkup"))el("ashcoMarkup").addEventListener("change",updateAshcoSettings);
-if(el("ashcoUplift"))el("ashcoUplift").addEventListener("change",updateAshcoSettings);
-if(el("addAshcoRowBtn"))el("addAshcoRowBtn").addEventListener("click",addAshcoRow);
-if(el("sendAshcoToQuoteBtn"))el("sendAshcoToQuoteBtn").addEventListener("click",sendAshcoToQuote);
-if(el("saveAshcoBtn"))el("saveAshcoBtn").addEventListener("click",()=>{saveAshcoCosting();alert("ASHCO costing saved.");});
-if(el("clearAshcoBtn"))el("clearAshcoBtn").addEventListener("click",clearAshcoCosting);
-wgeForceDefaultAddressFix();
-loadKensalCosting();
-if(el("nextQuoteRefBtn"))el("nextQuoteRefBtn").addEventListener("click",nextQuoteNumber);
-["kensalDayRate","kensalTravelRate","kensalLodgeRate","kensalMarkup","kensalLodgeQty","kensalTravelHours","kensalAdditionalDays"].forEach(id=>{if(el(id))el(id).addEventListener("change",updateKensalSettings);if(el(id))el(id).addEventListener("input",updateKensalSettings);});
-if(el("sendKensalToQuoteBtn"))el("sendKensalToQuoteBtn").addEventListener("click",sendKensalToQuote);
-if(el("saveKensalBtn"))el("saveKensalBtn").addEventListener("click",()=>{saveKensalCosting();alert("Kensal costing saved.");});
-if(el("clearKensalBtn"))el("clearKensalBtn").addEventListener("click",clearKensalCosting);
-if(el("exportKensalCsvBtn"))el("exportKensalCsvBtn").addEventListener("click",exportKensalCsv);
-loadKensalCosting();
-if(el("kensalRateLabour"))el("kensalRateLabour").addEventListener("input",()=>updateKensalSetting("labourRate",el("kensalRateLabour").value));
-if(el("kensalRateLodge"))el("kensalRateLodge").addEventListener("input",()=>updateKensalSetting("lodgeRate",el("kensalRateLodge").value));
-if(el("kensalAdditionalDays"))el("kensalAdditionalDays").addEventListener("input",()=>updateKensalSetting("additionalDays",el("kensalAdditionalDays").value));
-if(el("sendKensalToQuoteBtn"))el("sendKensalToQuoteBtn").addEventListener("click",sendKensalToQuote);
-if(el("saveKensalBtn"))el("saveKensalBtn").addEventListener("click",()=>{saveKensalCosting();alert("Kensal costing saved.");});
-if(el("clearKensalBtn"))el("clearKensalBtn").addEventListener("click",clearKensalCosting);if(el("quoteOwnerSelect"))el("quoteOwnerSelect").addEventListener("change",syncQuoteOwnerDetails);
-if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{try{saveCurrentQuote();}catch(e){}});
-if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
-if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
-if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();wireForceStartHereDropdowns();finalWireCreateQuoteButton();wireMasterWorkflow();finalWireQuoteGeneratorDropdowns();wgeWireFinal();wgeWireStartHereSiteFix();renderAll()}));["quoteRef","quoteDate","quoteFAO","quoteSiteAddress","quoteProjectTitle","quoteEnquiry","quoteScope","quoteAssumptions","quoteNetPrice","quoteVatRate","quoteValidity","invoiceNumber","invoiceDate","invoiceCustomer","invoiceEmail","invoiceSite","invoicePO","invoiceJobNo","invoiceNet","invoiceVatRate","paymentTerms","invoiceDescription"].forEach(id=>{if(el(id))el(id).addEventListener("input",()=>{renderQuotePreview();renderInvoicePreview()})});if(el("quotePreparedBy"))el("quotePreparedBy").addEventListener("change",()=>{updateQuoteEnquiryFromPrepared();renderQuotePreview()});el("quoteCustomer").addEventListener("change",()=>{populateQuoteSite();renderQuotePreview()});el("quoteSite").addEventListener("change",()=>{populateQuoteSiteAddress();renderQuotePreview()});
-if(el("quoteContact"))el("quoteContact").addEventListener("change",()=>{populateQuoteContacts();renderQuotePreview()});el("jobCustomer").addEventListener("change",populateJobSite);el("jobOwner").addEventListener("change",renderJobs);el("addCustomerBtn").addEventListener("click",addCustomer);if(el("seedDefaultCustomersBtn"))el("seedDefaultCustomersBtn").addEventListener("click",seedWGEDefaultCustomers);el("addSiteBtn").addEventListener("click",addSite);if(el("addSiteContactBtn"))el("addSiteContactBtn").addEventListener("click",addSiteContact);
-if(el("deleteSiteBtn"))el("deleteSiteBtn").addEventListener("click",deleteSelectedSite);
-if(el("deleteCustomerBtn"))el("deleteCustomerBtn").addEventListener("click",deleteSelectedCustomer);if(el("selectJobFolderBtn"))el("selectJobFolderBtn").addEventListener("click",selectJobFolder);
-if(el("manualJobFolderPath"))el("manualJobFolderPath").addEventListener("change",saveManualJobFolderPath);
-if(el("clearJobFolderBtn"))el("clearJobFolderBtn").addEventListener("click",clearJobFolder);
-if(el("manageCustomerSelect"))el("manageCustomerSelect").addEventListener("change",()=>{populateManageSiteSelect();fillManageCustomerSiteFields();});
-if(el("manageSiteSelect"))el("manageSiteSelect").addEventListener("change",fillManageCustomerSiteFields);
-if(el("updateCustomerSiteBtn"))el("updateCustomerSiteBtn").addEventListener("click",updateSelectedCustomerSite);
-if(el("useForQuoteBtn"))el("useForQuoteBtn").addEventListener("click",useSelectedSiteOnQuoteWithFolder);
-if(el("useForNewJobBtn"))el("useForNewJobBtn").addEventListener("click",useSelectedSiteOnNewJob);el("addJobBtn").addEventListener("click",addJob);if(el("addDictationPasteBtn"))el("addDictationPasteBtn").addEventListener("click",addDictationPasteToScope);if(el("voiceBtn"))el("voiceBtn").addEventListener("click",startScopeDictation);if(el("cleanRoughBtn"))el("cleanRoughBtn").addEventListener("click",cleanCurrentRoughNotes);el("rewriteBtn").addEventListener("click",rewriteScope);el("quotePdfBtn").addEventListener("click",quotePdf);el("quoteEmailBtn").addEventListener("click",openQuoteEmail);el("convertQuoteBtn").addEventListener("click",convertQuoteToJob);el("invoiceJobSelect").addEventListener("change",loadInvoiceFromJob);el("invoicePdfBtn").addEventListener("click",invoicePdf);el("invoiceEmailBtn").addEventListener("click",openInvoiceEmail);el("markInvoicedBtn").addEventListener("click",markInvoiced);if(el("ramsJobSelect"))el("ramsJobSelect").addEventListener("change",loadRamsFromJob);
-if(el("generateRamsBtn"))el("generateRamsBtn").addEventListener("click",generateRams);
-if(el("ramsPdfBtn"))el("ramsPdfBtn").addEventListener("click",ramsPdf);
-document.querySelectorAll(".riskCheck").forEach(x=>x.addEventListener("change",generateRams));
-["ramsClient","ramsSiteContact","ramsSiteAddress","ramsWorks","ramsPreparedBy"].forEach(id=>{if(el(id))el(id).addEventListener("input",generateRams)});
-el("backupBtn").addEventListener("click",()=>{const blob=new Blob([JSON.stringify({customers,jobs,quotes,rates},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="WGE-job-schedule-backup.json";a.click()});initialiseQuoteEnquiry();if(el("saveQuoteBtn"))el("saveQuoteBtn").addEventListener("click",()=>saveCurrentQuote());
-if(el("newQuoteBtn"))el("newQuoteBtn").addEventListener("click",newBlankQuote);
-if(el("quoteSearch"))el("quoteSearch").addEventListener("input",renderQuoteRegister);
-if(el("quoteStatusFilter"))el("quoteStatusFilter").addEventListener("change",renderQuoteRegister);loadCalc();
-if(el("calcRateA"))el("calcRateA").addEventListener("input",updateCalcRates);
-if(el("calcRateB"))el("calcRateB").addEventListener("input",updateCalcRates);
-if(el("calcRateC"))el("calcRateC").addEventListener("input",updateCalcRates);
-if(el("calcMarkup"))el("calcMarkup").addEventListener("change",updateCalcMarkup);
-if(el("addCalcLabourRow"))el("addCalcLabourRow").addEventListener("click",addCalcLabour);
-if(el("addCalcMaterialRow"))el("addCalcMaterialRow").addEventListener("click",addCalcMaterial);
-if(el("sendCalcToQuoteBtn"))el("sendCalcToQuoteBtn").addEventListener("click",sendCalcToQuote);
-if(el("saveCalcBtn"))el("saveCalcBtn").addEventListener("click",()=>{saveCalc();alert("Calculation saved.");});
-if(el("clearCalcBtn"))el("clearCalcBtn").addEventListener("click",clearCalc);seedWGEDefaultCustomersOnce();loadAshcoCosting();
-if(el("ashcoDefaultLabourRate"))el("ashcoDefaultLabourRate").addEventListener("input",updateAshcoSettings);
-if(el("ashcoMarkup"))el("ashcoMarkup").addEventListener("change",updateAshcoSettings);
-if(el("ashcoUplift"))el("ashcoUplift").addEventListener("change",updateAshcoSettings);
-if(el("addAshcoRowBtn"))el("addAshcoRowBtn").addEventListener("click",addAshcoRow);
-if(el("sendAshcoToQuoteBtn"))el("sendAshcoToQuoteBtn").addEventListener("click",sendAshcoToQuote);
-if(el("saveAshcoBtn"))el("saveAshcoBtn").addEventListener("click",()=>{saveAshcoCosting();alert("ASHCO costing saved.");});
-if(el("clearAshcoBtn"))el("clearAshcoBtn").addEventListener("click",clearAshcoCosting);
-wgeForceDefaultAddressFix();
-loadKensalCosting();
-if(el("nextQuoteRefBtn"))el("nextQuoteRefBtn").addEventListener("click",nextQuoteNumber);
-["kensalDayRate","kensalTravelRate","kensalLodgeRate","kensalMarkup","kensalLodgeQty","kensalTravelHours","kensalAdditionalDays"].forEach(id=>{if(el(id))el(id).addEventListener("change",updateKensalSettings);if(el(id))el(id).addEventListener("input",updateKensalSettings);});
-if(el("sendKensalToQuoteBtn"))el("sendKensalToQuoteBtn").addEventListener("click",sendKensalToQuote);
-if(el("saveKensalBtn"))el("saveKensalBtn").addEventListener("click",()=>{saveKensalCosting();alert("Kensal costing saved.");});
-if(el("clearKensalBtn"))el("clearKensalBtn").addEventListener("click",clearKensalCosting);
-if(el("exportKensalCsvBtn"))el("exportKensalCsvBtn").addEventListener("click",exportKensalCsv);
-loadKensalCosting();
-if(el("kensalRateLabour"))el("kensalRateLabour").addEventListener("input",()=>updateKensalSetting("labourRate",el("kensalRateLabour").value));
-if(el("kensalRateLodge"))el("kensalRateLodge").addEventListener("input",()=>updateKensalSetting("lodgeRate",el("kensalRateLodge").value));
-if(el("kensalAdditionalDays"))el("kensalAdditionalDays").addEventListener("input",()=>updateKensalSetting("additionalDays",el("kensalAdditionalDays").value));
-if(el("sendKensalToQuoteBtn"))el("sendKensalToQuoteBtn").addEventListener("click",sendKensalToQuote);
-if(el("saveKensalBtn"))el("saveKensalBtn").addEventListener("click",()=>{saveKensalCosting();alert("Kensal costing saved.");});
-if(el("clearKensalBtn"))el("clearKensalBtn").addEventListener("click",clearKensalCosting);if(el("quoteOwnerSelect"))el("quoteOwnerSelect").addEventListener("change",syncQuoteOwnerDetails);
-if(el("quoteTypeSelect"))el("quoteTypeSelect").addEventListener("change",()=>{try{saveCurrentQuote();}catch(e){}});
-if(el("createFreshQuoteBtn"))el("createFreshQuoteBtn").addEventListener("click",createFreshQuoteFlow);
-if(el("openCorrectCostingBtn"))el("openCorrectCostingBtn").addEventListener("click",openCorrectCosting);
-if(el("convertQuoteToJobBtn"))el("convertQuoteToJobBtn").addEventListener("click",convertQuoteToJob);
-syncQuoteOwnerDetails();clearStarterDemoData();wireQuoteStorageButtons();clearQuoteRegisterAndJobs();resetAllCostingToZero();renderQuoteStorageList();if(document.getElementById("wgeJobLoginBtn"))document.getElementById("wgeJobLoginBtn").addEventListener("click",wgeJobLogin);if(document.getElementById("wgeJobLogoutBtn"))document.getElementById("wgeJobLogoutBtn").addEventListener("click",wgeJobLogout);wgeApplyLoginState();syncAllLiveJobsToSupabase();ensureQuoteRegisterFilterControls();renderQuoteStorageList();workspaceWire();wireStartHereRaiseQuote();wireSafeLogin();wireSafeCustomerDropdowns();wireForceStartHereDropdowns();finalWireCreateQuoteButton();wireMasterWorkflow();finalWireQuoteGeneratorDropdowns();wgeWireFinal();wgeWireStartHereSiteFix();renderAll()})
 </script>
 
 <script>
@@ -11461,227 +11294,596 @@ document.addEventListener("DOMContentLoaded", function(){
 </script>
 
 
+
 <script>
-/* FINAL OVERRIDE: START HERE SITE DROPDOWN FIX - RUNS LAST */
+/* WGE STABLE LOGIN FINAL OVERRIDE */
 (function(){
-  const SITE_MAP = {
-    "kensal": ["British Pepper and Spice","Barts","Chivas Regal","JD Sports","Lucozade Ribena Suntory","McCormick"],
-    "ashco": ["Colindale"],
-    "team": ["Team Abbey Barns"],
-    "stamford": ["Hollywell Quarry"],
-    "mccormick": ["McCormick Peterborough"],
-    "princes": ["Long Sutton"]
+  const PASSWORD = "Admin2012!";
+  const USERS = {
+    "wayne":"Wayne Bonney",
+    "wayne bonney":"Wayne Bonney",
+    "david":"David Guy",
+    "david guy":"David Guy",
+    "master":"Master"
   };
 
-  function q(sel){ return document.querySelector(sel); }
-
-  function customerSelect(){
-    return document.getElementById("raiseQuoteCustomer")
-        || document.getElementById("workspaceCustomer")
-        || [...document.querySelectorAll("select")].find(s => {
-             const label = s.closest("div")?.querySelector("label")?.textContent?.toLowerCase() || "";
-             const title = s.closest("div")?.querySelector("strong")?.textContent?.toLowerCase() || "";
-             return label.includes("customer") || title.includes("customer");
-           });
+  function byId(id){ return document.getElementById(id); }
+  function loginScreen(){ return byId("login") || byId("wgeJobLogin") || document.querySelector(".login"); }
+  function userInput(){ return byId("loginUser") || byId("wgeJobLoginUser") || document.querySelector("#login select, .login select, #wgeJobLogin select"); }
+  function passInput(){ return byId("loginPass") || byId("password") || byId("wgeJobLoginPassword") || document.querySelector('#login input[type="password"], .login input[type="password"], #wgeJobLogin input[type="password"]'); }
+  function loginButton(){
+    return byId("loginBtn") || byId("wgeJobLoginBtn") || [...document.querySelectorAll("button")].find(b => {
+      const t = String(b.textContent||"").toLowerCase();
+      return t.includes("login") || t.includes("log in");
+    });
   }
-
-  function siteSelect(){
-    return document.getElementById("raiseQuoteSite")
-        || document.getElementById("workspaceSite")
-        || [...document.querySelectorAll("select")].find(s => {
-             const label = s.closest("div")?.querySelector("label")?.textContent?.toLowerCase() || "";
-             const title = s.closest("div")?.querySelector("strong")?.textContent?.toLowerCase() || "";
-             return label === "site" || title.includes("site");
-           });
+  function logoutButton(){
+    return byId("logoutBtn") || byId("wgeJobLogoutBtn") || [...document.querySelectorAll("button")].find(b => {
+      const t = String(b.textContent||"").toLowerCase();
+      return t.includes("logout") || t.includes("log out");
+    });
   }
-
-  function costingSelect(){
-    return document.getElementById("raiseQuoteType")
-        || document.getElementById("workspaceQuoteType")
-        || [...document.querySelectorAll("select")].find(s => {
-             const label = s.closest("div")?.querySelector("label")?.textContent?.toLowerCase() || "";
-             const title = s.closest("div")?.querySelector("strong")?.textContent?.toLowerCase() || "";
-             return label.includes("auto-selected") || title.includes("costing");
-           });
+  function loggedInNameBox(){
+    return byId("loggedInName") || byId("wgeLoggedInName") || [...document.querySelectorAll("*")].find(x => String(x.textContent||"").includes("Logged in as"));
   }
-
-  function selectedCustomerText(){
-    const c = customerSelect();
-    if(!c) return "";
-    return String(c.options[c.selectedIndex]?.textContent || c.value || "").toLowerCase();
+  function getSelectedUser(){
+    const u = userInput();
+    let raw = "";
+    if(u) raw = u.value || u.options?.[u.selectedIndex]?.textContent || "";
+    raw = String(raw || "Wayne").trim().toLowerCase();
+    return USERS[raw] || USERS[raw.split(" ")[0]] || "Wayne Bonney";
   }
-
-  function sitesForCustomer(){
-    const text = selectedCustomerText();
-    if(text.includes("kensal")) return SITE_MAP.kensal;
-    if(text.includes("ashco")) return SITE_MAP.ashco;
-    if(text.includes("team")) return SITE_MAP.team;
-    if(text.includes("stamford")) return SITE_MAP.stamford;
-    if(text.includes("princes")) return SITE_MAP.princes;
-    if(text.includes("mccormick")) return SITE_MAP.mccormick;
-    return [];
+  function getPassword(){
+    const p = passInput();
+    return p ? String(p.value || "") : "";
   }
-
-  function setCosting(){
-    const type = costingSelect();
-    if(!type) return;
-    const text = selectedCustomerText();
-    if(text.includes("kensal")) type.value = "kensal";
-    else if(text.includes("ashco")) type.value = "ashco";
-    else type.value = "standard";
+  function showApp(user){
+    try{ localStorage.setItem("wge_logged_in_user", JSON.stringify({name:user, at:new Date().toISOString()})); }catch(e){}
+    try{ localStorage.setItem("wge_job_schedule_logged_in", JSON.stringify({name:user, at:new Date().toISOString()})); }catch(e){}
+    const login = loginScreen();
+    if(login) login.classList.add("hidden");
+    document.querySelectorAll(".top,.wrap,main,#app,#mainApp").forEach(x => x.classList.remove("hidden"));
+    const box = loggedInNameBox();
+    if(box && String(box.textContent||"").includes("Logged in as")) box.textContent = "Logged in as " + user;
+    try{ if(typeof renderAll === "function") renderAll(); }catch(e){}
+    try{ if(typeof showTab === "function") showTab("raisequote"); }catch(e){}
   }
-
-  window.WGE_forceStartHereSites = function(){
-    const s = siteSelect();
-    if(!s) return;
-
-    const previous = s.value;
-    const list = sitesForCustomer();
-
-    s.innerHTML = '<option value="">Select site</option>' + list.map(site => {
-      const selected = previous === site ? ' selected' : '';
-      return '<option value="'+site.replace(/"/g,'&quot;')+'"'+selected+'>'+site+'</option>';
-    }).join("");
-
-    setCosting();
-  };
-
-  function wire(){
-    const c = customerSelect();
-    const s = siteSelect();
-
-    if(c && c.dataset.wgeFinalSiteFix !== "1"){
-      c.dataset.wgeFinalSiteFix = "1";
-      c.addEventListener("change", () => setTimeout(window.WGE_forceStartHereSites, 10), true);
-      c.addEventListener("input", () => setTimeout(window.WGE_forceStartHereSites, 10), true);
+  function doLogin(e){
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    const pass = getPassword();
+    const user = getSelectedUser();
+    if(pass !== PASSWORD){
+      alert("Incorrect password. Use Admin2012!");
+      return false;
     }
-
-    if(s && s.dataset.wgeFinalSiteFix !== "1"){
-      s.dataset.wgeFinalSiteFix = "1";
-      s.addEventListener("focus", window.WGE_forceStartHereSites, true);
-      s.addEventListener("mousedown", window.WGE_forceStartHereSites, true);
-      s.addEventListener("touchstart", window.WGE_forceStartHereSites, true);
-      s.addEventListener("click", window.WGE_forceStartHereSites, true);
-    }
-
-    window.WGE_forceStartHereSites();
+    showApp(user);
+    return false;
   }
-
-  document.addEventListener("DOMContentLoaded", wire);
-  document.addEventListener("change", function(e){
-    if(e.target === customerSelect()) setTimeout(window.WGE_forceStartHereSites, 10);
-  }, true);
-
-  setTimeout(wire, 100);
-  setTimeout(wire, 500);
-  setTimeout(wire, 1200);
-  setTimeout(wire, 2500);
+  function doLogout(e){
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    try{ localStorage.removeItem("wge_logged_in_user"); }catch(err){}
+    try{ localStorage.removeItem("wge_job_schedule_logged_in"); }catch(err){}
+    const login = loginScreen();
+    if(login) login.classList.remove("hidden");
+  }
+  function restoreIfAlreadyLoggedIn(){
+    let user = null;
+    try{ user = JSON.parse(localStorage.getItem("wge_logged_in_user") || localStorage.getItem("wge_job_schedule_logged_in") || "null"); }catch(e){}
+    if(user && user.name) showApp(user.name);
+  }
+  function wireLogin(){
+    const btn = loginButton();
+    const pass = passInput();
+    const logout = logoutButton();
+    if(btn && btn.dataset.wgeStableLogin !== "1"){
+      btn.dataset.wgeStableLogin = "1";
+      btn.onclick = doLogin;
+      btn.addEventListener("click", doLogin, true);
+      btn.addEventListener("touchend", doLogin, true);
+    }
+    if(pass && pass.dataset.wgeStableLogin !== "1"){
+      pass.dataset.wgeStableLogin = "1";
+      pass.addEventListener("keydown", function(e){ if(e.key === "Enter") doLogin(e); });
+    }
+    if(logout && logout.dataset.wgeStableLogout !== "1"){
+      logout.dataset.wgeStableLogout = "1";
+      logout.onclick = doLogout;
+      logout.addEventListener("click", doLogout, true);
+    }
+    restoreIfAlreadyLoggedIn();
+  }
+  document.addEventListener("DOMContentLoaded", wireLogin);
+  setTimeout(wireLogin,100);
+  setTimeout(wireLogin,500);
+  setTimeout(wireLogin,1500);
 })();
 </script>
 
 
 <script>
-/* FINAL SELECTABLE SITE DROPDOWN FIX */
+/* WGE FULL RESTORE SAFETY PATCH */
 (function(){
-  const SITE_MAP = {
-    "kensal": ["British Pepper and Spice","Barts","Chivas Regal","JD Sports","Lucozade Ribena Suntory","McCormick"],
-    "ashco": ["Colindale"],
-    "team": ["Team Abbey Barns"],
-    "stamford": ["Hollywell Quarry"],
-    "mccormick": ["McCormick Peterborough"],
-    "princes": ["Long Sutton"]
-  };
+  function byId(id){return document.getElementById(id);}
+  function safeText(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
+  function money(v){return "£"+Number(v||0).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});}
 
-  function findCustomerSelect(){
-    return document.getElementById("raiseQuoteCustomer")
-      || document.getElementById("workspaceCustomer")
-      || [...document.querySelectorAll("select")].find(s=>{
-        const label=(s.closest("div")?.querySelector("label")?.textContent||"").toLowerCase();
-        const title=(s.closest("div")?.querySelector("strong")?.textContent||"").toLowerCase();
-        return label.includes("customer") || title.includes("customer");
-      });
-  }
-
-  function findSiteSelect(){
-    return document.getElementById("raiseQuoteSite")
-      || document.getElementById("workspaceSite")
-      || [...document.querySelectorAll("select")].find(s=>{
-        const label=(s.closest("div")?.querySelector("label")?.textContent||"").toLowerCase();
-        const title=(s.closest("div")?.querySelector("strong")?.textContent||"").toLowerCase();
-        return label === "site" || title.includes("site");
-      });
-  }
-
-  function findCostingSelect(){
-    return document.getElementById("raiseQuoteType")
-      || document.getElementById("workspaceQuoteType")
-      || [...document.querySelectorAll("select")].find(s=>{
-        const label=(s.closest("div")?.querySelector("label")?.textContent||"").toLowerCase();
-        const title=(s.closest("div")?.querySelector("strong")?.textContent||"").toLowerCase();
-        return label.includes("auto-selected") || title.includes("costing");
-      });
-  }
-
-  function customerKey(){
-    const c=findCustomerSelect();
-    const text=String(c?.options[c.selectedIndex]?.textContent || c?.value || "").toLowerCase();
-    if(text.includes("kensal")) return "kensal";
-    if(text.includes("ashco")) return "ashco";
-    if(text.includes("team")) return "team";
-    if(text.includes("stamford")) return "stamford";
-    if(text.includes("princes")) return "princes";
-    if(text.includes("mccormick")) return "mccormick";
-    return "";
-  }
-
-  function cleanSiteSelect(){
-    const old=findSiteSelect();
-    if(!old) return null;
-    if(old.dataset.cleanSelectableSite === "1") return old;
-    const fresh=old.cloneNode(false);
-    fresh.id=old.id || "raiseQuoteSite";
-    fresh.className=old.className;
-    fresh.name=old.name;
-    fresh.dataset.cleanSelectableSite="1";
-    old.parentNode.replaceChild(fresh, old);
-    return fresh;
-  }
-
-  function populateSites(keepValue){
-    const s=cleanSiteSelect();
-    if(!s) return;
-    const key=customerKey();
-    const list=SITE_MAP[key] || [];
-    const oldValue=keepValue ? s.value : "";
-    s.innerHTML='<option value="">Select site</option>' + list.map(site=>{
-      const selected = oldValue === site ? " selected" : "";
-      return '<option value="'+site.replace(/"/g,"&quot;")+'"'+selected+'>'+site+'</option>';
-    }).join("");
-
-    const type=findCostingSelect();
-    if(type){
-      if(key==="kensal") type.value="kensal";
-      else if(key==="ashco") type.value="ashco";
-      else type.value="standard";
+  // Login fallback
+  function wireLoginFallback(){
+    const pass = byId("wgeJobLoginPassword") || byId("loginPass") || byId("password") || document.querySelector('input[type="password"]');
+    const btn = byId("wgeJobLoginBtn") || byId("loginBtn") || [...document.querySelectorAll("button")].find(b=>/log\s*in|login/i.test(b.textContent||""));
+    if(btn && btn.dataset.wgeFullRestoreLogin!=="1"){
+      btn.dataset.wgeFullRestoreLogin="1";
+      btn.addEventListener("click",function(e){
+        if(pass && pass.value && pass.value!=="Admin2012!") return;
+        const login = byId("wgeJobLogin") || byId("login") || document.querySelector(".login");
+        const app = byId("app") || byId("mainApp");
+        if(login) login.classList.add("hidden");
+        if(app) app.classList.remove("hidden");
+        document.querySelectorAll(".top,.wrap,main").forEach(x=>x.classList.remove("hidden"));
+      },true);
     }
-    s.onchange=function(){ s.dataset.selectedSite=s.value; };
+  }
+
+  // Dictation fallback for buttons containing Dictate
+  function wireDictationFallback(){
+    [...document.querySelectorAll("button")].forEach(btn=>{
+      if(!/dictate|microphone|🎙/i.test(btn.textContent||"")) return;
+      if(btn.dataset.wgeFullRestoreDictate==="1") return;
+      btn.dataset.wgeFullRestoreDictate="1";
+      btn.addEventListener("click",function(e){
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const notes = byId("quoteRoughScope") || byId("roughScope") || byId("roughNotes") || [...document.querySelectorAll("textarea")].find(t=>/rough|scope/i.test(t.placeholder||t.id||""));
+        if(!SR){
+          alert("Speech dictation is not supported in this browser. On iPhone/iPad, tap into Rough Scope Notes and use the keyboard microphone.");
+          return;
+        }
+        try{
+          const rec = new SR();
+          rec.lang="en-GB";
+          rec.interimResults=false;
+          rec.continuous=false;
+          rec.onresult=function(ev){
+            if(notes) notes.value += (notes.value ? " " : "") + ev.results[0][0].transcript;
+            notes && notes.dispatchEvent(new Event("input",{bubbles:true}));
+          };
+          rec.onerror=function(){alert("Microphone could not start. Please allow microphone permission for this website.");};
+          rec.start();
+        }catch(err){
+          alert("Microphone could not start. Please check browser microphone permission.");
+        }
+      },true);
+    });
+  }
+
+  // ASHCO price breakdown fallback
+  function findNumber(ids){
+    for(const id of ids){
+      const x=byId(id);
+      if(x && x.value!==undefined) return Number(x.value||0);
+      if(x && x.textContent!==undefined) return Number(String(x.textContent).replace(/[£,]/g,"")||0);
+    }
+    return 0;
+  }
+  function updateAshcoBreakdownBox(){
+    const isAshco = /ashco/i.test(
+      (byId("quoteCustomer")?.selectedOptions?.[0]?.textContent || "") + " " +
+      (byId("quoteTypeSelect")?.value || "") + " " +
+      (byId("quoteType")?.value || "")
+    );
+    if(!isAshco) return;
+
+    const labour = findNumber(["ashcoLabour","ashcoTotalLabour","ashcoLabourTotal","ashcoSummaryLabour"]);
+    const materials = findNumber(["ashcoMaterials","ashcoTotalMaterials","ashcoMaterialsSell","ashcoSummaryMaterials"]);
+    const lodge = findNumber(["ashcoLodge","ashcoTotalLodge","ashcoSummaryLodge"]);
+    const total = labour + materials + lodge;
+
+    const net = byId("quoteNetPrice") || byId("netPrice");
+    if(net && total>0) net.value = total.toFixed(2);
+
+    let holder = byId("wgeAshcoProjectBreakdown");
+    const priceSection = [...document.querySelectorAll(".docSection,.quote-section,section,div")].find(x=>/PRICE/i.test(x.textContent||"") && /Net Price|VAT|Total|sum of/i.test(x.textContent||""));
+    if(!holder && priceSection){
+      holder=document.createElement("div");
+      holder.id="wgeAshcoProjectBreakdown";
+      holder.style.cssText="border:1px solid #dbe5ef;border-radius:14px;margin:12px 0;padding:12px;background:#f8fafc";
+      priceSection.parentNode.insertBefore(holder, priceSection);
+    }
+    if(holder){
+      holder.innerHTML='<h3 style="margin:0 0 8px;letter-spacing:.08em;text-transform:uppercase">Project Breakdown</h3>'+
+        '<table style="width:100%;border-collapse:collapse">'+
+        '<tr><td>Labour</td><td style="text-align:right;font-weight:900">'+money(labour)+'</td></tr>'+
+        '<tr><td>Materials</td><td style="text-align:right;font-weight:900">'+money(materials)+'</td></tr>'+
+        '<tr><td>Lodge</td><td style="text-align:right;font-weight:900">'+money(lodge)+'</td></tr>'+
+        '<tr><td style="border-top:1px solid #dbe5ef"><strong>Project Total</strong></td><td style="text-align:right;border-top:1px solid #dbe5ef;font-weight:900">'+money(total)+'</td></tr>'+
+        '</table>';
+    }
   }
 
   function wire(){
-    const c=findCustomerSelect();
-    if(c && c.dataset.cleanSiteCustomer !== "1"){
-      c.dataset.cleanSiteCustomer="1";
-      c.addEventListener("change", function(){ setTimeout(()=>populateSites(false), 20); });
-    }
-    populateSites(true);
+    wireLoginFallback();
+    wireDictationFallback();
+    updateAshcoBreakdownBox();
+    document.addEventListener("input", updateAshcoBreakdownBox, true);
+    document.addEventListener("change", updateAshcoBreakdownBox, true);
   }
 
-  window.WGE_forceStartHereSites = function(){ populateSites(true); };
+  document.addEventListener("DOMContentLoaded", wire);
+  setTimeout(wire,400);
+  setTimeout(wire,1500);
+})();
+</script>
+
+
+<script>
+/* WGE FINAL STABILITY LAYER - BUTTONS / COSTING / DROPBOX */
+(function(){
+  function byId(id){ return document.getElementById(id); }
+  function text(el){ return String(el?.textContent || el?.value || "").toLowerCase(); }
+  function money(v){ return "£"+Number(v||0).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function num(v){ return Number(String(v||"").replace(/[£,]/g,"")) || 0; }
+  function visible(el){ return !!(el && el.offsetParent !== null); }
+
+  function findInputByHints(hints){
+    const all=[...document.querySelectorAll("input,textarea,select")];
+    return all.find(x=>{
+      const id=String(x.id||"").toLowerCase();
+      const name=String(x.name||"").toLowerCase();
+      const label=String(x.closest("div")?.querySelector("label")?.textContent||"").toLowerCase();
+      return hints.some(h=>id.includes(h)||name.includes(h)||label.includes(h));
+    });
+  }
+
+  function findSectionByName(names){
+    const secs=[...document.querySelectorAll("section,.card,div")];
+    return secs.find(sec=>{
+      const t=String(sec.textContent||"").toLowerCase();
+      return names.some(n=>t.includes(n));
+    });
+  }
+
+  function makeInput(value="0"){
+    const i=document.createElement("input");
+    i.type="number"; i.step="0.01"; i.value=value;
+    i.style.minWidth="90px";
+    return i;
+  }
+
+  function ensureDropboxPanel(){
+    if(byId("wgeDropboxPanel")) return;
+    const quoteSec = byId("quoteprint") || byId("quote") || findSectionByName(["quote generator"]);
+    if(!quoteSec) return;
+    const div=document.createElement("div");
+    div.id="wgeDropboxPanel";
+    div.className="wgeDropboxPanel quoteNoPrint noPrint";
+    div.innerHTML = `
+      <strong>Dropbox Job Folder</strong>
+      <div class="wgeDropboxActions">
+        <button class="btn2" type="button" id="wgeSelectDropboxFolderBtn">Select Dropbox Folder</button>
+        <button class="btn2" type="button" id="wgeOpenDropboxFolderBtn">Open Folder / Show Path</button>
+        <input id="wgeDropboxPath" placeholder="/Users/waynebonney/Library/CloudStorage/Dropbox/WGE/APP" style="min-width:320px;flex:1">
+      </div>
+      <div class="wgeStatusNote" id="wgeDropboxStatus">Browser security may block direct Finder opening. The folder path is stored with the quote and can be copied/opened from here.</div>
+    `;
+    quoteSec.prepend(div);
+    wireDropbox();
+  }
+
+  async function selectDropboxFolder(){
+    const pathInput=byId("wgeDropboxPath");
+    try{
+      if(window.showDirectoryPicker){
+        const handle = await window.showDirectoryPicker();
+        window.wgeDropboxHandle = handle;
+        if(pathInput) pathInput.value = handle.name;
+        localStorage.setItem("wge_dropbox_folder_label", handle.name);
+        byId("wgeDropboxStatus").textContent = "Folder selected: "+handle.name+". Browser has permission for this session.";
+        return;
+      }
+    }catch(e){}
+
+    const current = pathInput?.value || localStorage.getItem("wge_dropbox_path") || "/Users/waynebonney/Library/CloudStorage/Dropbox/WGE/APP";
+    const entered = prompt("Paste/type the Dropbox job folder path:", current);
+    if(entered){
+      if(pathInput) pathInput.value = entered;
+      localStorage.setItem("wge_dropbox_path", entered);
+      byId("wgeDropboxStatus").textContent = "Dropbox path saved: "+entered;
+    }
+  }
+
+  function openDropboxFolder(){
+    const path = byId("wgeDropboxPath")?.value || localStorage.getItem("wge_dropbox_path") || "/Users/waynebonney/Library/CloudStorage/Dropbox/WGE/APP";
+    localStorage.setItem("wge_dropbox_path", path);
+    const status=byId("wgeDropboxStatus");
+    if(status) status.innerHTML = 'Saved path: <strong>'+path+'</strong><br>Copy this path into Finder using Go &gt; Go to Folder.';
+    try{
+      const a=document.createElement("a");
+      a.href="file://"+path;
+      a.click();
+    }catch(e){}
+  }
+
+  function wireDropbox(){
+    if(byId("wgeSelectDropboxFolderBtn")) byId("wgeSelectDropboxFolderBtn").onclick = selectDropboxFolder;
+    if(byId("wgeOpenDropboxFolderBtn")) byId("wgeOpenDropboxFolderBtn").onclick = openDropboxFolder;
+    const pathInput=byId("wgeDropboxPath");
+    if(pathInput){
+      pathInput.value = localStorage.getItem("wge_dropbox_path") || pathInput.value || "/Users/waynebonney/Library/CloudStorage/Dropbox/WGE/APP";
+      pathInput.onchange = () => localStorage.setItem("wge_dropbox_path", pathInput.value);
+    }
+  }
+
+  function createGenericCalcRow(section){
+    const table = section.querySelector("table tbody") || section.querySelector("tbody");
+    if(table){
+      const cols = table.closest("table")?.querySelectorAll("thead th").length || table.querySelector("tr")?.children.length || 5;
+      const tr=document.createElement("tr");
+      for(let i=0;i<cols;i++){
+        const td=document.createElement("td");
+        if(i===0){
+          const input=document.createElement("input"); input.placeholder="Description"; td.appendChild(input);
+        }else{
+          td.appendChild(makeInput("0"));
+        }
+        tr.appendChild(td);
+      }
+      table.appendChild(tr);
+      return true;
+    }
+
+    const row=document.createElement("div");
+    row.className="grid grid4";
+    row.innerHTML=`<div><label>Description</label><input placeholder="Description"></div>
+      <div><label>Qty / Hours</label><input type="number" step="0.01" value="0"></div>
+      <div><label>Rate / Cost</label><input type="number" step="0.01" value="0"></div>
+      <div><label>Total</label><input type="number" step="0.01" value="0"></div>`;
+    section.appendChild(row);
+    return true;
+  }
+
+  function sectionNearButton(btn){
+    return btn.closest("section") || btn.closest(".card") || btn.closest("div");
+  }
+
+  function ashcoTotals(){
+    const scope = byId("ashcoCosting") || byId("ashco") || findSectionByName(["ashco costing"]);
+    const all = scope ? [...scope.querySelectorAll("input,td,span,div")] : [...document.querySelectorAll("input,td,span,div")];
+
+    function findVal(words){
+      // Prefer exact input ids
+      const exact = all.find(x=>{
+        const id=String(x.id||"").toLowerCase();
+        return words.every(w=>id.includes(w));
+      });
+      if(exact) return num(exact.value || exact.textContent);
+
+      // Look for row/label text next to inputs
+      for(const x of all){
+        const row=x.closest("tr") || x.closest("div");
+        const t=String(row?.textContent||"").toLowerCase();
+        if(words.every(w=>t.includes(w))){
+          const input=row.querySelector("input");
+          if(input) return num(input.value);
+          const cells=[...row.querySelectorAll("td")];
+          const last=cells[cells.length-1];
+          if(last) return num(last.textContent);
+        }
+      }
+      return 0;
+    }
+
+    let labour = findVal(["labour"]);
+    let materials = findVal(["material"]);
+    let lodge = findVal(["lodge"]);
+
+    // Fallback: if summary fields are blank, sum obvious table totals
+    if(!labour && scope){
+      [...scope.querySelectorAll("tr")].forEach(tr=>{
+        const t=String(tr.textContent||"").toLowerCase();
+        const vals=[...tr.querySelectorAll("input")].map(i=>num(i.value)).filter(Boolean);
+        const last=vals[vals.length-1] || num(tr.lastElementChild?.textContent);
+        if(t.includes("labour")) labour += last;
+        else if(t.includes("material")) materials += last;
+        else if(t.includes("lodge") || t.includes("hotel")) lodge += last;
+      });
+    }
+
+    return {labour, materials, lodge, total:labour+materials+lodge};
+  }
+
+  function sendPriceToQuote(){
+    const totals=ashcoTotals();
+    const net = byId("quoteNetPrice") || byId("netPrice") || findInputByHints(["net","price","total"]);
+    if(net) net.value = totals.total.toFixed(2);
+
+    // Preserve in localStorage for quote preview patches.
+    localStorage.setItem("wge_ashco_breakdown", JSON.stringify(totals));
+
+    // Try common render functions
+    ["renderQuotePreview","renderQuote","updateQuotePreview","calculateQuoteTotals"].forEach(fn=>{
+      try{ if(typeof window[fn]==="function") window[fn](); }catch(e){}
+    });
+
+    ensureAshcoBreakdownInPreview();
+    alert("Price sent to quote: "+money(totals.total));
+  }
+
+  function ensureAshcoBreakdownInPreview(){
+    let totals={labour:0,materials:0,lodge:0,total:0};
+    try{ totals = JSON.parse(localStorage.getItem("wge_ashco_breakdown")||"null") || ashcoTotals(); }catch(e){ totals=ashcoTotals(); }
+
+    const preview = byId("quotePreview") || document.querySelector(".quotePreview,.doc,.quotePage");
+    if(!preview) return;
+
+    let box = byId("wgeAshcoBreakdownFinal");
+    if(!box){
+      box=document.createElement("div");
+      box.id="wgeAshcoBreakdownFinal";
+      box.style.cssText="border:1px solid #dbe5ef;border-radius:14px;margin:12px 0;padding:12px;background:#f8fafc";
+      const priceNode=[...preview.querySelectorAll("*")].find(x=>/price/i.test(x.textContent||""));
+      if(priceNode && priceNode.parentNode) priceNode.parentNode.insertBefore(box, priceNode.nextSibling);
+      else preview.appendChild(box);
+    }
+    box.innerHTML = `<h3 style="margin:0 0 8px;text-transform:uppercase;letter-spacing:.08em">Project Breakdown</h3>
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td>Labour</td><td style="text-align:right;font-weight:900">${money(totals.labour)}</td></tr>
+        <tr><td>Materials</td><td style="text-align:right;font-weight:900">${money(totals.materials)}</td></tr>
+        <tr><td>Lodge</td><td style="text-align:right;font-weight:900">${money(totals.lodge)}</td></tr>
+        <tr><td style="border-top:1px solid #dbe5ef"><strong>Project Total</strong></td><td style="text-align:right;border-top:1px solid #dbe5ef;font-weight:900">${money(totals.total)}</td></tr>
+      </table>`;
+  }
+
+  function wireCalculationButtons(){
+    [...document.querySelectorAll("button")].forEach(btn=>{
+      const t=text(btn);
+      if(btn.dataset.wgeFinalCalcWired==="1") return;
+
+      if(t.includes("add row") || t.includes("add line")){
+        btn.dataset.wgeFinalCalcWired="1";
+        btn.addEventListener("click",function(e){
+          e.preventDefault(); e.stopPropagation();
+          createGenericCalcRow(sectionNearButton(btn));
+        },true);
+      }
+
+      if((t.includes("send") && t.includes("quote")) || (t.includes("price") && t.includes("quote")) || (t.includes("total") && t.includes("quote"))){
+        btn.dataset.wgeFinalCalcWired="1";
+        btn.addEventListener("click",function(e){
+          e.preventDefault(); e.stopPropagation();
+          sendPriceToQuote();
+        },true);
+      }
+    });
+  }
+
+  // Global delegated safety net, in case buttons are dynamically rebuilt
+  document.addEventListener("click",function(e){
+    const btn=e.target.closest("button");
+    if(!btn) return;
+    const t=text(btn);
+    if(t.includes("add row") || t.includes("add line")){
+      e.preventDefault(); e.stopPropagation();
+      createGenericCalcRow(sectionNearButton(btn));
+    }
+    if((t.includes("send") && t.includes("quote")) || (t.includes("price") && t.includes("quote")) || (t.includes("total") && t.includes("quote"))){
+      e.preventDefault(); e.stopPropagation();
+      sendPriceToQuote();
+    }
+  },true);
+
+  function wire(){
+    ensureDropboxPanel();
+    wireCalculationButtons();
+    ensureAshcoBreakdownInPreview();
+  }
 
   document.addEventListener("DOMContentLoaded", wire);
-  setTimeout(wire,100);
-  setTimeout(wire,600);
-  setTimeout(wire,1500);
+  setTimeout(wire,300);
+  setTimeout(wire,1200);
+  setTimeout(wire,2500);
+})();
+</script>
+
+
+<script>
+/* WGE FINAL RAMS + INVOICE JOB SPECIFIC PATCH */
+(function(){
+  function byId(id){return document.getElementById(id);}
+  function val(ids){for(const id of ids){const x=byId(id); if(x) return x.value || x.textContent || "";} return "";}
+  function set(ids,v){for(const id of ids){const x=byId(id); if(x){if("value" in x)x.value=v; else x.textContent=v;}}}
+  function money(v){return "£"+Number(v||0).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
+  function qtext(){
+    return [
+      val(["quoteScope","scopeWorks","quoteRoughScope","roughScope","roughNotes"]),
+      val(["quoteProjectTitle","quoteProject","projectTitle"]),
+      val(["quoteSite","siteName"])
+    ].join(" ").toLowerCase();
+  }
+  function quoteData(){
+    const custSel=byId("quoteCustomer");
+    const siteSel=byId("quoteSite");
+    return {
+      ref:val(["quoteRef"]),
+      project:val(["quoteProjectTitle","quoteProject","projectTitle"]),
+      customer:custSel?.selectedOptions?.[0]?.textContent || val(["quoteCustomer","customerName"]),
+      site:siteSel?.selectedOptions?.[0]?.textContent || val(["quoteSite","siteName"]),
+      address:val(["quoteSiteAddress","siteAddress"]),
+      scope:val(["quoteScope","scopeWorks","quoteRoughScope","roughScope","roughNotes"]),
+      price:Number(val(["quoteNetPrice","netPrice"]).replace(/[£,]/g,"")||0)
+    };
+  }
+  function hazardRows(){
+    const t=qtext();
+    const base=[
+      ["Electric shock / live services","Serious injury or fatality","Isolation to be carried out where required. Prove dead using approved test equipment. Lock-off and warning notices to be used where applicable.","Low"],
+      ["Slips, trips and falls","Injury from poor housekeeping","Keep access routes clear. Manage trailing leads and remove waste materials during works.","Low"],
+      ["Manual handling","Strains and crush injury","Assess loads before lifting. Use team lifts or mechanical assistance where required.","Low"],
+      ["Use of hand and power tools","Cuts, impact injury and vibration exposure","Use inspected equipment only. Correct PPE, guards and accessories to be used. Operatives to be competent.","Low"]
+    ];
+    if(/ladder|steps|height|high level|roof|mezzanine|tray|containment/.test(t)) base.push(["Working at height","Fall from height","Use suitable access equipment. Inspect steps/platforms before use. Avoid overreaching and maintain safe working area below.","Low"]);
+    if(/drill|core|cut|dust|chase/.test(t)) base.push(["Dust / drilling / cutting","Respiratory irritation, eye injury","Use extraction or dust suppression where practical. Wear eye protection and suitable RPE where required.","Low"]);
+    if(/hot works|grind|weld|cutting/.test(t)) base.push(["Hot works","Fire and burns","Hot works only under permit where required. Fire extinguisher and fire watch to be in place.","Low"]);
+    if(/swa|cable|pull|containment|tray|conduit/.test(t)) base.push(["Cable installation and containment","Strains, sharp edges, falling materials","Deburr containment, support cables correctly and use gloves. Maintain exclusion area where working overhead.","Low"]);
+    if(/panel|db|distribution|board|isolator|mccb|rcbo|commission/.test(t)) base.push(["Electrical panel / distribution board works","Electric shock, arc flash, incorrect operation","Only competent electricians to work on equipment. Follow isolation procedure and test before energisation.","Low"]);
+    if(/food|factory|production|hygiene|mccormick|princes|long sutton/.test(t)) base.push(["Food production environment","Contamination, hygiene breach","Follow site hygiene rules, tool control and clean-as-you-go procedures. Report any contamination risk immediately.","Low"]);
+    return base;
+  }
+  function methodText(){
+    const q=quoteData();
+    return [
+      "Attend site, sign in and complete any required site induction or permit process.",
+      "Review the work area, access routes, welfare, emergency arrangements and any site-specific rules.",
+      "Confirm the scope of works against quotation " + (q.ref || "") + " and agree the working area with the site contact.",
+      "Carry out electrical isolation where required and prove dead using approved test equipment.",
+      "Set out a safe working area using signage/barriers where required.",
+      "Carry out the works described in the quotation scope: " + (q.scope || "electrical installation works as instructed."),
+      "Test, inspect and commission the installation where applicable.",
+      "Remove waste materials, leave the work area clean and safe, and hand back to the site contact.",
+      "Issue certification, test results or handover information where required."
+    ].join("\n");
+  }
+  function generateRams(){
+    const q=quoteData();
+    set(["ramsRef"],"RAMS-"+(q.ref||""));
+    set(["ramsProject"],q.project||q.site||"Electrical works");
+    set(["ramsCustomer"],q.customer);
+    set(["ramsSite"],q.site);
+    set(["ramsSiteAddress","ramsAddress"],q.address);
+    set(["ramsScope"],q.scope);
+    set(["ramsMethod"],methodText());
+    const rows=hazardRows();
+    const table='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="border:1px solid #dbe5ef;padding:7px;background:#eef7ff">Hazard</th><th style="border:1px solid #dbe5ef;padding:7px;background:#eef7ff">Risk</th><th style="border:1px solid #dbe5ef;padding:7px;background:#eef7ff">Control Measures</th><th style="border:1px solid #dbe5ef;padding:7px;background:#eef7ff">Residual</th></tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td style="border:1px solid #dbe5ef;padding:7px;vertical-align:top">'+esc(c)+'</td>').join("")+'</tr>').join("")+'</tbody></table>';
+    const preview=byId("ramsPreview") || document.querySelector(".ramsPreview,.ramsPage");
+    if(preview){
+      preview.innerHTML='<div style="padding:28px;background:white"><h1 style="text-align:center">RAMS</h1><h2 style="text-align:center;color:#0f6ea8">Risk Assessment & Method Statement</h2><p><strong>Ref:</strong> '+esc("RAMS-"+(q.ref||""))+'</p><p><strong>Customer:</strong> '+esc(q.customer)+'</p><p><strong>Site:</strong> '+esc(q.site)+'</p><p><strong>Address:</strong><br>'+esc(q.address).replace(/\n/g,"<br>")+'</p><h3>Scope of Works</h3><p style="white-space:pre-wrap">'+esc(q.scope)+'</p><h3>Risk Assessment</h3>'+table+'<h3>Method Statement</h3><p style="white-space:pre-wrap">'+esc(methodText())+'</p><h3>PPE</h3><p>Safety boots, hi-vis, gloves, eye protection, hearing protection and RPE where required.</p><h3>Emergency Arrangements</h3><p>Follow site emergency procedures. Report all incidents and near misses to site management.</p><br><p>Prepared by: __________________ Date: __________</p><p>Operatives briefed: ____________ Date: __________</p></div>';
+    }
+  }
+  function ashcoBreakdown(){
+    let saved=null; try{saved=JSON.parse(localStorage.getItem("wge_ashco_breakdown")||"null");}catch(e){}
+    return saved||{labour:0,materials:0,lodge:0,total:Number(val(["quoteNetPrice","netPrice"]).replace(/[£,]/g,"")||0)};
+  }
+  function updateInvoice(){
+    const q=quoteData(), a=ashcoBreakdown();
+    const invoice=byId("invoicePreview") || document.querySelector(".invoicePreview,#invoice,.invoicePage");
+    if(!invoice) return;
+    invoice.innerHTML='<div style="padding:28px;background:white"><h1>INVOICE</h1><p><strong>Customer:</strong> '+esc(q.customer)+'</p><p><strong>Site:</strong> '+esc(q.site)+'</p><p><strong>Quote Ref:</strong> '+esc(q.ref)+'</p><table style="width:100%;border-collapse:collapse"><tr><td style="border-bottom:1px solid #ddd;padding:8px">Labour</td><td style="border-bottom:1px solid #ddd;padding:8px;text-align:right">'+money(a.labour)+'</td></tr><tr><td style="border-bottom:1px solid #ddd;padding:8px">Materials</td><td style="border-bottom:1px solid #ddd;padding:8px;text-align:right">'+money(a.materials)+'</td></tr><tr><td style="border-bottom:1px solid #ddd;padding:8px">Lodge</td><td style="border-bottom:1px solid #ddd;padding:8px;text-align:right">'+money(a.lodge)+'</td></tr><tr><td style="padding:8px"><strong>Project Total</strong></td><td style="padding:8px;text-align:right"><strong>'+money(a.total)+'</strong></td></tr></table></div>';
+  }
+  function wireFinal(){
+    document.querySelectorAll("button").forEach(b=>{
+      const t=String(b.textContent||"").toLowerCase();
+      if(/rams|method|risk/.test(t) && !b.dataset.wgeRamsFinal){
+        b.dataset.wgeRamsFinal="1";
+        b.addEventListener("click",()=>setTimeout(generateRams,100),true);
+      }
+      if(/invoice/.test(t) && !b.dataset.wgeInvFinal){
+        b.dataset.wgeInvFinal="1";
+        b.addEventListener("click",()=>setTimeout(updateInvoice,100),true);
+      }
+    });
+  }
+  document.addEventListener("DOMContentLoaded",wireFinal);
+  setTimeout(wireFinal,500);
+  setTimeout(wireFinal,1500);
 })();
 </script>
 
