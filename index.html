@@ -11887,5 +11887,167 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
+
+<script>
+/* WGE DG PREFIX + ASHCO BREAKDOWN GUARANTEE */
+(function(){
+  function byId(id){return document.getElementById(id);}
+  function money(v){return "£"+Number(v||0).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function num(v){return Number(String(v||"").replace(/[£,]/g,""))||0;}
+  function selectedText(id){
+    const x=byId(id);
+    return String(x?.selectedOptions?.[0]?.textContent || x?.value || "");
+  }
+  function ownerName(){
+    return selectedText("startOwner") || selectedText("quoteOwner") || selectedText("quotePreparedBy") || selectedText("quoteOwnerSelect") || "";
+  }
+  function ownerPrefix(){
+    const o=ownerName().toLowerCase();
+    return o.includes("david") || o.includes("dg") ? "DG" : "WB";
+  }
+  function existingQuoteRefs(){
+    let refs=[];
+    ["wge_quotes_clean","wge_quote_register","wge_saved_quotes","wge_master_jobs"].forEach(k=>{
+      try{
+        const list=JSON.parse(localStorage.getItem(k)||"[]");
+        if(Array.isArray(list)){
+          refs=refs.concat(list.map(q=>String(q.ref||q.quoteRef||q.jobNumber||"")));
+        }
+      }catch(e){}
+    });
+    return refs;
+  }
+  function nextRefForOwner(){
+    const prefix=ownerPrefix();
+    const nums=existingQuoteRefs().map(r=>{
+      const m=String(r).match(new RegExp("^"+prefix+"-?(\\d+)"));
+      return m?Number(m[1]):0;
+    });
+    return prefix+(Math.max(3999,...nums)+1);
+  }
+
+  window.quotePrefix=function(){return ownerPrefix();};
+  window.nextRef=function(){return nextRefForOwner();};
+  window.nextWorkspaceQuoteNumber=function(){return nextRefForOwner();};
+  window.finalNextQuoteRef=function(){return nextRefForOwner();};
+  window.finalQuotePrefix=function(){return ownerPrefix();};
+  window.masterPrefix=function(){return ownerPrefix();};
+  window.nextMasterQuoteRef=function(){return nextRefForOwner();};
+
+  function fixQuoteRefAfterOwnerChange(){
+    const ref=byId("quoteRef");
+    if(!ref) return;
+    const current=String(ref.value||"");
+    const desired=ownerPrefix();
+    if(!current || /^(WB|DG)-?\d+$/i.test(current)){
+      if(!current.startsWith(desired)){
+        ref.value=nextRefForOwner();
+      }
+    }
+  }
+
+  function ashcoTotals(){
+    let saved=null;
+    try{saved=JSON.parse(localStorage.getItem("wge_ashco_breakdown")||"null");}catch(e){}
+    if(saved && (Number(saved.labour)||Number(saved.materials)||Number(saved.lodge)||Number(saved.total))) {
+      return {labour:Number(saved.labour||0), materials:Number(saved.materials||0), lodge:Number(saved.lodge||0), total:Number(saved.total||0)};
+    }
+    const ids = {
+      labour:["ashcoLabour","ashcoTotalLabour","ashcoLabourTotal","ashcoSummaryLabour"],
+      materials:["ashcoMaterials","ashcoTotalMaterials","ashcoMaterialsTotal","ashcoSummaryMaterials"],
+      lodge:["ashcoLodge","ashcoTotalLodge","ashcoLodgeTotal","ashcoSummaryLodge"]
+    };
+    function getAny(list){
+      for(const id of list){
+        const x=byId(id);
+        if(x) return num(x.value || x.textContent);
+      }
+      return 0;
+    }
+    const labour=getAny(ids.labour);
+    const materials=getAny(ids.materials);
+    const lodge=getAny(ids.lodge);
+    return {labour, materials, lodge, total:labour+materials+lodge};
+  }
+
+  function isAshcoQuote(){
+    const txt=[
+      selectedText("startCustomer"),
+      selectedText("quoteCustomer"),
+      selectedText("quoteTypeSelect"),
+      selectedText("startCosting"),
+      selectedText("workspaceQuoteType")
+    ].join(" ").toLowerCase();
+    return txt.includes("ashco");
+  }
+
+  function guaranteeAshcoBreakdown(){
+    if(!isAshcoQuote()) return;
+
+    const totals=ashcoTotals();
+    if(totals.total>0){
+      const net=byId("quoteNetPrice")||byId("netPrice");
+      if(net) net.value=totals.total.toFixed(2);
+      localStorage.setItem("wge_ashco_breakdown",JSON.stringify(totals));
+    }
+
+    const quotePreview=byId("quotePreview") || document.querySelector(".quotePreview,.quotePage,.doc");
+    if(!quotePreview) return;
+
+    let box=byId("wgeGuaranteedAshcoBreakdown");
+    if(!box){
+      box=document.createElement("div");
+      box.id="wgeGuaranteedAshcoBreakdown";
+      box.style.cssText="border:1px solid #dbe5ef;border-radius:14px;margin:12px 0;padding:12px;background:#f8fafc";
+      const priceNode=[...quotePreview.querySelectorAll("*")].find(x=>/^price$/i.test(String(x.textContent||"").trim()) || /We would be pleased to undertake/i.test(String(x.textContent||"")));
+      if(priceNode && priceNode.parentNode) priceNode.parentNode.insertBefore(box, priceNode);
+      else quotePreview.appendChild(box);
+    }
+
+    box.innerHTML =
+      '<h3 style="margin:0 0 8px;text-transform:uppercase;letter-spacing:.08em">Project Breakdown</h3>'+
+      '<table style="width:100%;border-collapse:collapse">'+
+      '<tr><td style="padding:8px;border-bottom:1px solid #e5edf5">Labour</td><td style="padding:8px;border-bottom:1px solid #e5edf5;text-align:right;font-weight:900">'+money(totals.labour)+'</td></tr>'+
+      '<tr><td style="padding:8px;border-bottom:1px solid #e5edf5">Materials</td><td style="padding:8px;border-bottom:1px solid #e5edf5;text-align:right;font-weight:900">'+money(totals.materials)+'</td></tr>'+
+      '<tr><td style="padding:8px;border-bottom:1px solid #e5edf5">Lodge</td><td style="padding:8px;border-bottom:1px solid #e5edf5;text-align:right;font-weight:900">'+money(totals.lodge)+'</td></tr>'+
+      '<tr><td style="padding:8px"><strong>Project Total</strong></td><td style="padding:8px;text-align:right;font-weight:900"><strong>'+money(totals.total)+'</strong></td></tr>'+
+      '</table>';
+  }
+
+  function wrapCreateFunctions(){
+    ["createQuote","createQuoteNumberAndOpenQuote","createMasterQuoteAndOpen","finalCreateQuoteNumberAndOpenQuote"].forEach(fn=>{
+      if(typeof window[fn]==="function" && !window[fn].__wgeWrappedDG){
+        const old=window[fn];
+        const wrapped=function(){
+          const result=old.apply(this,arguments);
+          setTimeout(()=>{fixQuoteRefAfterOwnerChange(); guaranteeAshcoBreakdown();},100);
+          return result;
+        };
+        wrapped.__wgeWrappedDG=true;
+        window[fn]=wrapped;
+      }
+    });
+  }
+
+  function wire(){
+    wrapCreateFunctions();
+    ["startOwner","quoteOwner","quotePreparedBy","quoteOwnerSelect"].forEach(id=>{
+      const x=byId(id);
+      if(x && x.dataset.dgPrefixFix!=="1"){
+        x.dataset.dgPrefixFix="1";
+        x.addEventListener("change",fixQuoteRefAfterOwnerChange);
+      }
+    });
+    document.addEventListener("input",()=>setTimeout(guaranteeAshcoBreakdown,50),true);
+    document.addEventListener("change",()=>setTimeout(guaranteeAshcoBreakdown,50),true);
+    setTimeout(guaranteeAshcoBreakdown,200);
+  }
+
+  document.addEventListener("DOMContentLoaded",wire);
+  setTimeout(wire,300);
+  setTimeout(wire,1200);
+})();
+</script>
+
 </body>
 </html>
