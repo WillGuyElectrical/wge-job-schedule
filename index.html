@@ -581,15 +581,37 @@ function updateRows(e){if(updateKensal(e))return; const el=e.target; if(el.datas
 function addRow(kind){if(kind==='standardLabour'){standardCosting().labour.push({description:'Labour',qty:1,amount:8,pattern:'hourA'}); renderStandard();save();return;} if(kind==='standardMaterial'){standardCosting().materials.push({description:'Material',qty:1,base:0,markup:20,labourTime:0}); renderStandard();save();return;} if(kind==='kensal'){ensureKensal().additionalMaterials.push({description:'',qty:1,unit:0}); renderKensal(); save(); return;} const blank={ashco:{category:'Labour',description:'',amount:0,hours:0,labourRate:44,materialCost:0,sundry:0,markup:1.2,missed:0}}[kind]; state[kind+'Rows'].push(blank); renderStandard();renderKensal();renderAshco();save();}
 function removeRow(kind,i){if(kind==='standardLabour'){standardCosting().labour.splice(Number(i),1);} else if(kind==='standardMaterial'){standardCosting().materials.splice(Number(i),1);} else if(kind==='kensal'){ensureKensal().additionalMaterials.splice(Number(i),1);} else state[kind+'Rows'].splice(Number(i),1); renderStandard();renderKensal();renderAshco();renderQuote();save();}
 function sendCosting(kind){const total=kind==='standard'?standardTotals().total:kind==='kensal'?kensalTotals().total:ashcoTotals().total; $('quoteType').value=kind; $('netPrice').value=total.toFixed(2); renderQuote(); saveQuote(false); showTab('quote');}
+function normaliseDictatedElectricalText(text){let s=String(text||'').replace(/[’]/g,"'").replace(/\s+/g,' ').trim(); const reps=[[/\bP\s*L\s*O\s*(one|1)\b/ig,'PCL01'],[/\bP\s*C\s*L\s*(one|1)\b/ig,'PCL01'],[/\bPLO\s*(one|1)\b/ig,'PCL01'],[/\bPCL\s*(one|1)\b/ig,'PCL01'],[/\bpast vowels\b/ig,'repairs to valves'],[/\bpass vowels\b/ig,'repairs to valves'],[/\bvalves all reinstallation\b/ig,'valves or reinstallation'],[/\ball reinstallation\b/ig,'or reinstallation'],[/\bMcCormicks\b/ig,"McCormick's"],[/\bPeterborough McCormick's\b/ig,"McCormick Peterborough"]]; reps.forEach(([a,b])=>{s=s.replace(a,b);}); return s;}
 function cleanScopeLine(line){return String(line||'').replace(/^[\s\-•*0-9.)]+/,'').replace(/\s+/g,' ').trim();}
-function scopeLinesFromRough(text){return String(text||'').split(/[\n.;]+/).map(cleanScopeLine).filter(Boolean);}
-function cleanRamsTaskLine(line){let s=cleanScopeLine(line); const l=s.toLowerCase(); if(!s)return ''; if(l.includes('man day')||l.includes('man days')||l.includes('completion')&&l.includes('allowed'))return ''; if(l.includes('quotation does not include')||l.includes('quote does not include')||l.includes('allowances for repairs')||l.includes('reinstallation'))return ''; s=s.replace(/^we\s+have\s+made\s+allowance\s+to\s+carry\s+out\s+/i,''); s=s.replace(/^we\s+have\s+allowed\s+(for\s+)?/i,''); s=s.replace(/^allowance\s+has\s+been\s+made\s+(to|for)\s+/i,''); return cleanScopeLine(s);}
+function splitCommercialSentences(text){return normaliseDictatedElectricalText(text).replace(/\bwe have allowed\b/ig,'. We have allowed').replace(/\bplease quotation\b/ig,'. Please note this quotation').replace(/\bquotation does not\b/ig,'. This quotation does not').split(/[\n.;]+/).map(cleanScopeLine).filter(Boolean);}
+function scopeLinesFromRough(text){return splitCommercialSentences(text);}
+function cleanRamsTaskLine(line){let s=cleanScopeLine(line); const l=s.toLowerCase(); if(!s)return ''; if(l.includes('man day')||l.includes('man days')||l.includes('completion')&&l.includes('allowed'))return ''; if(l.includes('quotation does not include')||l.includes('quote does not include')||l.includes('allowances for repairs')||l.includes('reinstallation'))return ''; s=s.replace(/^we\s+have\s+made\s+allowance\s+to\s+carry\s+out\s+/i,''); s=s.replace(/^we\s+have\s+allowed\s+(for\s+)?/i,''); s=s.replace(/^allowance\s+has\s+been\s+(made|included)\s+(to|for)\s+/i,''); return cleanScopeLine(s);}
 function ramsTaskLinesFromText(text){return String(text||'').split(/[\n.;]+/).map(cleanRamsTaskLine).filter(Boolean);}
+function commercialTaskFromRough(rough){const text=normaliseDictatedElectricalText(rough); let work='electrical works as described'; const m=text.match(/(?:carry\s+out|for)\s+(.+?)(?:\s+we\s+have\s+allowed|\s+please\s+|\s+this\s+quotation\s+does\s+not|$)/i); if(m)work=m[1]; work=work.replace(/^we\s+have\s+made\s+allowance\s+to\s+carry\s+out\s+/i,'').replace(/^allowance\s+has\s+been\s+(made|included)\s+(to|for)\s+/i,'').replace(/\s+/g,' ').trim(); return cleanScopeLine(work).replace(/[.;]+$/,'');}
+function commercialDurationFromRough(rough){const t=normaliseDictatedElectricalText(rough).toLowerCase(); if(/\b(one|1)\s*(man\s*)?day\b/.test(t)||/\bone\s+day\b/.test(t))return 'We have allowed one working day for completion, subject to agreed access, permits and isolation being available.'; const m=t.match(/\b(\d+)\s*(man\s*)?days?\b/); return m?`We have allowed ${m[1]} working day(s) for completion, subject to agreed access, permits and isolation being available.`:'';}
+function commercialExclusionsFromRough(rough){const t=normaliseDictatedElectricalText(rough).toLowerCase(); const out=[]; if(t.includes('repair')||t.includes('repairs to valves'))out.push('Repairs to the valves are excluded.'); if(t.includes('reinstall')||t.includes('reinstallation'))out.push('Reinstallation of the valves is excluded.'); if(t.includes('recommission'))out.push('Recommissioning of process equipment is excluded.'); if(t.includes('remedial'))out.push('Any remedial works to existing equipment are excluded unless instructed separately.'); return out;}
 function localCommercialRewrite(rough){
- const lines=scopeLinesFromRough(rough);
- const scope=lines.length?lines.map(l=>'• '+l.charAt(0).toUpperCase()+l.slice(1)).join('\n')+'\n• Test, commission and certify completed electrical works where applicable.':'';
- const assumptions=DEFAULT_ASSUMPTIONS+'\n\nThis quotation is based strictly on the scope described above. Any additional works, changes in site conditions, client variations, out-of-hours working, specialist access, or works not expressly included may be subject to additional cost.';
- return {scope,assumptions,clarifications:['Generated from the rough scope notes only.','Review before issuing to confirm no item has been missed or overstated.'],source:'Local commercial rewrite'};
+ const normalised=normaliseDictatedElectricalText(rough);
+ const task=commercialTaskFromRough(normalised);
+ const lower=task.toLowerCase();
+ const scope=[];
+ if(lower.includes('disconnect')||lower.includes('disconnection')){
+  scope.push(`Carry out electrical disconnection of ${task.replace(/^disconnection\s+(to|of)\s+/i,'').replace(/^electrical\s+disconnection\s+(to|of)\s+/i,'')}.`);
+  scope.push('Identify the associated wiring/circuits, safely isolate where required, disconnect and make safe the relevant cable cores/terminations.');
+  scope.push('Label and leave disconnected wiring/equipment safe for future reference where applicable.');
+ } else if(lower.includes('install')||lower.includes('connect')||lower.includes('cable')){
+  scope.push(`Carry out ${task}.`);
+  scope.push('Install, connect and secure the associated electrical materials, containment, wiring and terminations as required for the works.');
+  scope.push('Test and certify the completed electrical installation where applicable.');
+ } else {
+  scope.push(`Carry out ${task}.`);
+  scope.push('Complete associated labour, materials, fixings, terminations and testing required for the quoted electrical works where applicable.');
+ }
+ const duration=commercialDurationFromRough(normalised); if(duration)scope.push(duration);
+ const exclusions=commercialExclusionsFromRough(normalised);
+ const assumptions=[DEFAULT_ASSUMPTIONS,'This quotation is based strictly on the scope described above. Any additional works, changes in site conditions, client variations, out-of-hours working, specialist access, or works not expressly included may be subject to additional cost.'];
+ if(exclusions.length)assumptions.push(exclusions.join(' '));
+ return {scope:scope.map(x=>'• '+x).join('\n'),assumptions:assumptions.join('\n\n'),clarifications:['Generated from dictated rough notes and cleaned into commercial quotation wording.','Speech errors have been normalised where obvious, for example PLO one to PCL01 and past vowels to repairs to valves.','Review before issuing to confirm equipment names, site names and exclusions are correct.'],source:'Local WGE commercial rewrite'};
 }
 async function aiCommercialRewrite(rough){
  const endpoint=localStorage.getItem('wgeAiRewriteEndpoint')||'';
