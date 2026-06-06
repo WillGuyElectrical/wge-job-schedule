@@ -1340,7 +1340,7 @@ function commercialTaskFromRough(rough){const text=normaliseDictatedElectricalTe
 function commercialDurationFromRough(rough){const t=normaliseDictatedElectricalText(rough).toLowerCase(); const words={one:1,two:2,three:3,four:4,five:5}; const fmt=n=>`We have allowed ${n} working ${Number(n)===1?'day':'days'} for completion, subject to agreed access, permits and isolation being available.`; const wm=t.match(/\b(one|two|three|four|five)\s*(man\s*)?days?\b/); if(wm)return fmt(words[wm[1]]); const m=t.match(/\b(\d+)\s*(man\s*)?days?\b/); return m?fmt(m[1]):'';}
 function commercialExclusionsFromRough(rough){const t=normaliseDictatedElectricalText(rough).toLowerCase(); const out=[]; if(t.includes('repair')||t.includes('repairs to valves'))out.push('Repairs to the valves are excluded.'); if(t.includes('reinstall')||t.includes('reinstallation'))out.push('Reinstallation of the valves is excluded.'); if(t.includes('recommission'))out.push('Recommissioning of process equipment is excluded.'); if(t.includes('remedial'))out.push('Any remedial works to existing equipment are excluded unless instructed separately.'); return out;}
 function commercialPrettyTask(task){let s=cleanScopeLine(task).replace(/^electrical\s+works?\s+(to|for)\s+/i,'').replace(/^disconnection\s+(to|of)\s+/i,'').replace(/^electrical\s+disconnection\s+(to|of)\s+/i,'').replace(/^installation\s+(of|to)\s+/i,'').replace(/\s+/g,' ').trim(); return s||'the agreed electrical works';}
-function commercialSitePhrase(){return [$('quoteCustomerName')?.value,$('quoteSiteName')?.value].map(v=>String(v||'').trim()).filter(Boolean).join(' - ');}
+function commercialSitePhrase(){const vals=[$('quoteCustomerName')?.value,$('quoteSiteName')?.value].map(v=>String(v||'').trim()).filter(Boolean); const out=[]; vals.forEach(v=>{const low=v.toLowerCase(); if(!out.some(x=>x.toLowerCase()===low||low.includes(x.toLowerCase())||x.toLowerCase().includes(low)))out.push(v);}); return out.join(' - ');}
 function commercialTaskHasSite(task){const t=String(task||'').toLowerCase(); return [$('quoteCustomerName')?.value,$('quoteSiteName')?.value].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean).some(v=>t.includes(v));}
 function uniqueCommercialLines(lines){return lines.map(cleanScopeLine).filter(Boolean).filter((v,i,a)=>a.findIndex(x=>x.toLowerCase()===v.toLowerCase())===i);}
 function stripCommercialCopyNoise(text){return normaliseDictatedElectricalText(String(text||'').replace(/\n/g,' WGE_LINE_BREAK '))
@@ -1401,8 +1401,8 @@ function quoteOriginalScopeActivities(text){
  return uniqueCommercialLines(activities);
 }
 function quoteActivityTokens(text){
- const synonyms={isolate:'isolation',isolating:'isolation',isolated:'isolation',disconnect:'disconnection',disconnecting:'disconnection',disconnected:'disconnection',connect:'connection',connecting:'connection',connected:'connection',reconnect:'reconnection',reconnecting:'reconnection',reconnected:'reconnection',terminate:'termination',terminated:'termination',terminating:'termination',test:'testing',tested:'testing',checks:'checking',check:'checking',install:'installation',installed:'installation',installing:'installation',remove:'removal',removed:'removal',removing:'removal',containment:'containment',basket:'basket',tray:'tray',tail:'tails',tails:'tails',motor:'motors',motors:'motors',cable:'cabling',cables:'cabling',cabling:'cabling',return:'return',visit:'return'};
- const stop=new Set(['the','and','for','with','from','into','onto','off','to','of','in','on','at','as','be','are','is','our','scope','includes','include','included','allow','allowance','works','work','carry','out','safe','safely','electrical','associated','required','where','applicable']);
+ const synonyms={isolate:'isolation',isolating:'isolation',isolated:'isolation',disconnect:'disconnection',disconnecting:'disconnection',disconnected:'disconnection',connect:'connection',connecting:'connection',connected:'connection',reconnect:'reconnection',reconnecting:'reconnection',reconnected:'reconnection',terminate:'termination',terminated:'termination',terminating:'termination',test:'testing',tested:'testing',checks:'checking',check:'checking',install:'installation',installed:'installation',installing:'installation',remove:'removal',removed:'removal',removing:'removal',containment:'containment',basket:'basket',tray:'tray',tail:'tails',tails:'tails',motor:'motors',motors:'motors',cable:'cabling',cables:'cabling',cabling:'cabling',return:'return',visit:'return',light:'lighting',lights:'lighting',fitting:'lighting',sensor:'pir',return:'return'};
+ const stop=new Set(['the','and','for','with','from','into','onto','off','to','of','in','on','at','as','be','are','is','our','scope','includes','include','included','allow','allowance','works','work','carry','out','safe','safely','electrical','associated','required','where','applicable','new','own','top','stairs','leading','when','come','comes','down','all','turn','turns','so','that','its']);
  return String(text||'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ').split(/\s+/).map(w=>synonyms[w]||w).filter(w=>w.length>2&&!stop.has(w));
 }
 function quoteMissingScopeActivities(original,polished){
@@ -1411,7 +1411,9 @@ function quoteMissingScopeActivities(original,polished){
   const tokens=quoteActivityTokens(activity);
   if(!tokens.length)return false;
   const required=tokens.length<=2?tokens:tokens.filter(t=>!['electrical','works'].includes(t));
-  return required.some(t=>!polishedTokens.has(t));
+  const matched=required.filter(t=>polishedTokens.has(t)).length;
+  if(required.length<=3)return matched<required.length;
+  return matched/required.length<0.55;
  });
 }
 function professionaliseScopeActivity(line){
@@ -1444,6 +1446,8 @@ function scopePreservingLocalPolish(rough){
   const site=commercialSitePhrase();
   const location=site&&!commercialTaskHasSite(task)?` at ${site}`:'';
   const paragraphs=[`We have made allowance to ${task}${location}.`];
+  const purpose=quotationPurposeSentence(normalised);
+  if(purpose)paragraphs.push(purpose);
   if(/\btest|commission|certif|inspection|check\b/i.test(normalised))paragraphs.push('Testing, commissioning and certification will be completed where applicable to the agreed scope of works.');
   scope=paragraphs.map(sentenceCase).join('\n\n');
  }
@@ -1540,12 +1544,15 @@ function quotationTechnicalFixes(text){
   [/\b16\s*amp\b/ig,'16A'],[/\b(\d+)\s*amp\b/ig,'$1A'],[/\bsingle\s*phase\b/ig,'single-phase'],[/\bthree\s*phase\b/ig,'three-phase'],[/\b3\s*phase\b/ig,'three-phase'],
   [/\bcoord(?:inator)?\s+office\s+db\b/ig,"distribution board located within the Coordinator's Office"],[/\bdb\b/ig,'distribution board'],
   [/\bsurge\s+(thing|protector|protection)\b/ig,'surge protection device'],[/\bSPD\b/g,'surge protection device'],
-  [/\blocal\s+local\s+isolator\b/ig,'local isolator'],[/\bisolator\b/ig,'local isolator'],[/\bseamer\b/ig,'Seamer'],[/\bPCL\s*0?1\b/ig,'PCL01']
+  [/\blocal\s+local\s+isolator\b/ig,'local isolator'],[/\bisolator\b/ig,'local isolator'],[/\bseamer\b/ig,'Seamer'],[/\bPCL\s*0?1\b/ig,'PCL01'],
+  [/\bpir\b/ig,'PIR'],[/\bplant\s+deck\b/ig,'plant deck'],[/\btop\s+of\s+the\s+stairs\s+up\s+to\b/ig,'top of the stairs leading up to']
  ];
  reps.forEach(([a,b])=>{s=s.replace(a,b);});
  s=s.replace(/\blocal\s+local\s+isolator\b/ig,'local isolator').replace(/\b(\w+)\s+\1\b/ig,'$1').replace(/\s+/g,' ').trim();
  return s;
 }
+function quotationLightingPirWorkText(text){const s=quotationTechnicalFixes(text); if(!/\blight|lighting\b/i.test(s)||!/\bPIR\b/i.test(s))return ''; const location=/top\s+of\s+the\s+stairs|plant\s+deck/i.test(s)?'at the top of the stairs leading up to the plant deck':'in the agreed location'; return `supply and install a new light fitting complete with its own PIR sensor ${location}`;}
+function quotationPurposeSentence(text){const s=quotationTechnicalFixes(text); const m=s.match(/\bso\s+that\s+(.+?)$/i); if(m){let purpose=m[1].replace(/[.;]+$/,'').trim(); purpose=purpose.replace(/^when\s+pedestrians\s+come\s+from\s+the\s+plant\s+deck\s+down\s+all\s+the\s+lights\s+turn\s+on$/i,'pedestrians travelling down from the plant deck activate the lighting automatically'); purpose=purpose.replace(/\ball\s+the\s+lights\s+turn\s+on\b/i,'the lighting turns on automatically'); return sentenceCase(`The installation is intended to ensure ${purpose}.`);} if(/\blight|lighting\b/i.test(s)&&/\bPIR\b/i.test(s))return 'The PIR sensor is to provide automatic lighting activation for pedestrians using the stairs and plant deck access route.'; return '';}
 function quotationMainWorkText(text){
  let s=quotationTechnicalFixes(text)
   .replace(/^we\s+have\s+made\s+allowance\s+to\s+/i,'')
@@ -1556,6 +1563,8 @@ function quotationMainWorkText(text){
   .replace(/\bquote\s+does\s+not.*$/i,'')
   .replace(/\s+/g,' ')
   .trim();
+ const lightingPir=quotationLightingPirWorkText(s);
+ if(lightingPir)return lightingPir;
  const feed=s.match(/\b(?:run|install|supply)\s+(?:a\s+)?(.+?)\s+from\s+(.+?)\s+to\s+(?:serve\s+)?(.+?)(?:\s+(?:put|install|include|complete|with|and)\s+|$)/i);
  if(feed){
   const qClean=v=>String(v||'').replace(/^[\s\-•*.)]+/,'').replace(/\s+/g,' ').trim();
