@@ -3083,10 +3083,11 @@ function renderBusinessCalendar(){
  else if(view==='month'){start=calendarMonthStart(anchor); end=calendarMonthEnd(anchor); title=new Date(anchor+'T12:00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'});}
  else if(view==='list'){start='1900-01-01'; end='2999-12-31'; title='List View';}
  const events=calendarEventsBetween(start,end), overdue=calendarOverdueEvents();
- if($('calendarContent'))$('calendarContent').innerHTML=`<h3>${esc(title)}</h3>${overdue.length?`<div class="notice" style="border-color:#fecaca;background:#fff1f2"><strong>Overdue follow-ups / reminders</strong><br>${overdue.map(e=>`${dateGB(e.date)} - ${esc(e.title)}`).join('<br>')}</div>`:''}${view==='month'?calendarMonthHtml(anchor,events):view==='week'?calendarWorkWeekHtml(anchor,events):calendarEventTable(events)}`;
+ if($('calendarContent'))$('calendarContent').innerHTML=`<h3>${esc(title)}</h3>${overdue.length?calendarOverdueHtml(overdue):''}${view==='month'?calendarMonthHtml(anchor,events):view==='week'?calendarWorkWeekHtml(anchor,events):calendarEventTable(events)}`;
  wireCalendarUi();
 }
 function calendarActionsHtml(e){return `<button class="btnGreen" type="button" data-calendar-complete="${esc(e.id)}">Task Complete</button> <button class="btn2" type="button" data-calendar-edit="${esc(e.id)}">Edit</button> ${e.jobRef?`<button class="btn2" type="button" data-calendar-open-link="${esc(e.jobRef)}">Open</button>`:''} ${e.source==='Manual'?`<button class="btnRed" type="button" data-calendar-delete="${esc(e.id)}">Delete</button>`:''}`;}
+function calendarOverdueHtml(events){return `<div class="notice" style="border-color:#fecaca;background:#fff1f2"><strong>Overdue follow-ups / reminders</strong>${events.map(e=>`<div class="notice" style="margin-top:8px;background:white"><strong>${dateGB(e.date)}</strong> - ${esc(e.title)}<br><span class="small muted">${esc(e.type||'Reminder')}${e.jobRef?' - '+esc(e.jobRef):''}</span><div style="margin-top:6px">${calendarActionsHtml(e)}</div></div>`).join('')}</div>`;}
 function calendarEventTable(events){return `<div class="tableWrap"><table><thead><tr><th>Date</th><th>Time</th><th>Type</th><th>Title</th><th>Customer / Site</th><th>Job</th><th>Notes</th><th>Status</th><th>Actions</th></tr></thead><tbody>${events.map(e=>`<tr><td>${dateGB(e.date)}</td><td>${esc([e.start,e.end].filter(Boolean).join(' - '))}</td><td>${esc(e.type)}</td><td><strong>${esc(e.title)}</strong><br><span class="small muted">${esc(e.source||'Manual')}</span></td><td>${esc(e.customer||'')}<br><span class="small muted">${esc(e.site||'')}</span></td><td>${esc(e.jobRef||'')}</td><td>${esc(e.notes||'')}</td><td>${esc(e.status||'Planned')}</td><td>${calendarActionsHtml(e)}</td></tr>`).join('')||'<tr><td colspan="9" class="muted">No calendar events for this view.</td></tr>'}</tbody></table></div>`;}
 function calendarWorkWeekHtml(anchor,events){const start=mondayFor(anchor), names=['Monday','Tuesday','Wednesday','Thursday','Friday']; return `<div class="grid grid5">${names.map((name,i)=>{const d=addDays(start,i), dayEvents=events.filter(e=>e.date===d); return `<div class="notice" style="min-height:220px"><h3 style="margin-top:0">${name}</h3><div class="muted small">${dateGB(d)}</div>${dayEvents.map(e=>`<div class="notice" style="margin-top:8px;background:white"><strong>${esc(e.start||'')}</strong> ${esc(e.title)}<br><span class="small muted">${esc(e.type)}${e.jobRef?' - '+esc(e.jobRef):''}</span><div style="margin-top:6px">${calendarActionsHtml(e)}</div></div>`).join('')||'<div class="small muted" style="margin-top:8px">No business events.</div>'}</div>`;}).join('')}</div>`;}
 function calendarMonthHtml(anchor,events){const start=calendarMonthStart(anchor), end=calendarMonthEnd(anchor), days=[]; for(let d=start;d<=end;d=addDays(d,1)){const ev=events.filter(e=>e.date===d); days.push(`<div class="notice" style="min-height:88px"><strong>${new Date(d+'T12:00:00').getDate()}</strong>${ev.slice(0,3).map(e=>`<div class="small">${esc(e.title)}</div>`).join('')}</div>`);} return `<div class="grid grid4">${days.join('')}</div>`;}
@@ -3102,7 +3103,7 @@ function saveCalendarEvent(){
  calendarEnsureState();
  const rec=crmProfile($('calendarCustomerSite')?.value), jobRef=$('calendarJobRef')?.value||'';
  const editingId=window.wgeEditingCalendarEventId||'', existing=editingId?calendarAllEvents().find(e=>e.id===editingId):null;
- const event={id:editingId||newId(),title:$('calendarTitle').value.trim(),date:$('calendarDate').value||today(),start:$('calendarStart').value,end:$('calendarEnd').value,customer:rec.customer||existing?.customer||'',site:rec.site||existing?.site||'',jobRef,type:$('calendarType').value,notes:$('calendarNotes').value,attendees:$('calendarAttendees').value,reminder:$('calendarReminder').value==='yes',status:$('calendarStatus').value,linkedType:jobRef?'Live Job':'Customer',linkedRef:jobRef||rec.id||existing?.linkedRef||'',createdAt:existing?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
+ const event={id:editingId||newId(),title:$('calendarTitle').value.trim(),date:$('calendarDate').value||today(),start:$('calendarStart').value,end:$('calendarEnd').value,customer:rec.customer||existing?.customer||'',site:rec.site||existing?.site||'',jobRef,type:$('calendarType').value,notes:$('calendarNotes').value,owner:$('calendarOwner')?.value||existing?.owner||wgeCurrentUserName(),attendees:$('calendarAttendees').value,reminder:$('calendarReminder').value==='yes',status:$('calendarStatus').value,linkedType:jobRef?'Live Job':'Customer',linkedRef:jobRef||rec.id||existing?.linkedRef||'',createdAt:existing?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
  if(!event.title){alert('Add an event title.');return;}
  state.calendarEvents=state.calendarEvents.filter(e=>e.id!==event.id);
  state.calendarEvents.unshift(event);
@@ -3125,6 +3126,51 @@ initTabs=function(){installBusinessCalendarUi(); const ids=['start','customers',
 
 // WGE 2026-06-08 refinements: invoice reminders, RAMS personnel guard, calendar defaults and CRM/site tightening.
 function wgeCurrentUserName(){return $('loginUser')?.value||$('quoteOwner')?.value||'Wayne Bonney';}
+function wgeCalendarOwnerOptions(selected=''){
+ const current=selected||wgeCurrentUserName();
+ const options=['Wayne Bonney','David Guy','Both Wayne and David'];
+ return options.map(name=>`<option value="${esc(name)}" ${name===current?'selected':''}>${esc(name)}</option>`).join('');
+}
+function installCalendarOwnerControl(){
+ const status=$('calendarStatus');
+ if(!status||$('calendarOwner'))return;
+ const wrap=status.closest('div');
+ wrap?.insertAdjacentHTML('afterend',`<div><label>Owner / Calendar</label><select id="calendarOwner">${wgeCalendarOwnerOptions()}</select></div>`);
+}
+function wgeCalendarUserCode(name=wgeCurrentUserName()){return /david/i.test(name)?'DG':'WB';}
+function wgeCalendarTextIncludesCurrent(text){
+ const lower=String(text||'').toLowerCase();
+ if(!lower)return false;
+ const david=/david/i.test(wgeCurrentUserName());
+ const tokens=david?['david','david guy','dg']:['wayne','wayne bonney','wb'];
+ return /\bboth\b|\ball\b/.test(lower)||tokens.some(t=>lower.includes(t));
+}
+function wgeCalendarEventRefCode(e){
+ const text=[e.jobRef,e.quoteRef,e.ref,e.linkedRef,e.title].filter(Boolean).join(' ');
+ const match=text.match(/\b(WB|DG)[-\s]?\d+/i);
+ return match?match[1].toUpperCase():'';
+}
+function wgeCalendarEventVisibleToCurrentUser(e){
+ const currentCode=wgeCalendarUserCode(), refCode=wgeCalendarEventRefCode(e);
+ const explicitlyIncludesCurrent=wgeCalendarTextIncludesCurrent([e.owner,e.attendees,e.notes].join(' '));
+ if(refCode&&refCode!==currentCode&&!(e.source==='Manual'&&explicitlyIncludesCurrent))return false;
+ const owner=String(e.owner||'').trim();
+ if(owner&&!/both|all/i.test(owner)&&!wgeCalendarTextIncludesCurrent(owner)&&!wgeCalendarTextIncludesCurrent(e.attendees))return false;
+ const attendees=String(e.attendees||'').trim();
+ if(!owner&&!refCode&&/^(wayne bonney|wayne|wb|david guy|david|dg)$/i.test(attendees)&&!wgeCalendarTextIncludesCurrent(attendees))return false;
+ return true;
+}
+const wgeOriginalInstallBusinessCalendarUiForOwners=installBusinessCalendarUi;
+installBusinessCalendarUi=function(){wgeOriginalInstallBusinessCalendarUiForOwners(); installCalendarOwnerControl();};
+const wgeOriginalCalendarAllEventsForOwners=calendarAllEvents;
+calendarAllEvents=function(){return wgeOriginalCalendarAllEventsForOwners().filter(wgeCalendarEventVisibleToCurrentUser);};
+const wgeOriginalEditCalendarEventForOwners=editCalendarEvent;
+editCalendarEvent=function(id){
+ const original=wgeOriginalCalendarAllEventsForOwners().find(x=>String(x.id)===String(id));
+ wgeOriginalEditCalendarEventForOwners(id);
+ installCalendarOwnerControl();
+ if($('calendarOwner'))$('calendarOwner').innerHTML=wgeCalendarOwnerOptions(original?.owner||wgeCurrentUserName());
+};
 function wgeInvoiceDefaultPath(){return /david/i.test(wgeCurrentUserName())?'/Users/davidguy/Library/CloudStorage/Dropbox/WGE/Invoice/2026':'/Users/waynebonney/Library/CloudStorage/Dropbox/WGE/Invoice/2026';}
 function setInvoiceDefaultSavePath(){
  const path=wgeInvoiceDefaultPath();
