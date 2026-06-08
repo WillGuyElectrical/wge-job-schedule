@@ -1119,7 +1119,9 @@ async function selectSaveFolder(){if('showDirectoryPicker' in window){try{const 
 function saveManualDropboxPath(){const path=($('manualDropboxPath')?.value||'').trim(); if(!path){alert('Please enter a Dropbox folder path.');return;} localStorage.setItem(WGE_MANUAL_DROPBOX_PATH_KEY,path); if($('dropboxPath'))$('dropboxPath').value=path; updateSelectedFolderDisplay(); alert('Dropbox folder path saved.');}
 async function clearSavedFolder(){window.wgeSelectedDirectoryHandle=null; localStorage.removeItem(WGE_SELECTED_FOLDER_NAME_KEY); localStorage.removeItem(WGE_MANUAL_DROPBOX_PATH_KEY); await clearDirectoryHandleDb(); if($('manualDropboxPath'))$('manualDropboxPath').value=WGE_DEFAULT_SAVE_PATH; if($('dropboxPath'))$('dropboxPath').value=WGE_DEFAULT_SAVE_PATH; updateSelectedFolderDisplay(); alert('Saved folder cleared. Default Dropbox path restored.');}
 function openFolderInstructions(){const path=($('manualDropboxPath')?.value||localStorage.getItem(WGE_MANUAL_DROPBOX_PATH_KEY)||WGE_DEFAULT_SAVE_PATH).trim(); alert('Open this folder on your Mac:\n\n'+path+'\n\nIf Finder folder selection does not open, copy this path, then use Finder > Go > Go to Folder and paste it. When printing a PDF, choose this same Dropbox folder in the Save dialog.');}
-async function saveBlobToSelectedFolder(fileName,blob,silent=false){if(window.wgeSelectedDirectoryHandle){try{const perm=await window.wgeSelectedDirectoryHandle.requestPermission?.({mode:'readwrite'}); if(perm&&perm!=='granted')throw new Error('Folder permission was not granted.'); const fileHandle=await window.wgeSelectedDirectoryHandle.getFileHandle(fileName,{create:true}); const writable=await fileHandle.createWritable(); await writable.write(blob); await writable.close(); if(!silent)alert('Saved to selected folder:\n\n'+(localStorage.getItem(WGE_SELECTED_FOLDER_NAME_KEY)||'Selected folder')+'\n\nFile: '+fileName+'\n\nYou do not need to print it again.'); return true;}catch(err){console.error(err); if(!silent)alert('Could not save directly to the selected folder. Downloading file instead. Move it into: '+selectedFolderLabel());}}
+function saveFolderPathReference(){return ($('manualDropboxPath')?.value||localStorage.getItem(WGE_MANUAL_DROPBOX_PATH_KEY)||WGE_DEFAULT_SAVE_PATH).trim();}
+function savedFolderMessage(fileName,direct=false){const picked=localStorage.getItem(WGE_SELECTED_FOLDER_NAME_KEY)||'Selected folder'; const path=saveFolderPathReference(); const filePath=path?`${path.replace(/\/$/,'')}/${fileName}`:fileName; if(direct){return `Saved to selected folder:\n\nDirect folder name: ${picked}\n\nPath reference:\n${path}\n\nFile path reference:\n${filePath}\n\nChrome confirms the file has been written to the selected Finder folder. Chrome does not expose the full Mac path for direct folder handles, so the path reference is shown for checking.`;} return `Downloaded file:\n\nSuggested folder:\n${path}\n\nFile path reference:\n${filePath}\n\nIf the browser downloaded it somewhere else, move it into the folder shown above.`;}
+async function saveBlobToSelectedFolder(fileName,blob,silent=false){if(window.wgeSelectedDirectoryHandle){try{const perm=await window.wgeSelectedDirectoryHandle.requestPermission?.({mode:'readwrite'}); if(perm&&perm!=='granted')throw new Error('Folder permission was not granted.'); const fileHandle=await window.wgeSelectedDirectoryHandle.getFileHandle(fileName,{create:true}); const writable=await fileHandle.createWritable(); await writable.write(blob); await writable.close(); if(!silent)alert(savedFolderMessage(fileName,true)); return true;}catch(err){console.error(err); if(!silent)alert('Could not save directly to the selected folder. Downloading file instead.\n\n'+savedFolderMessage(fileName,false));}}
  if(silent)return false; const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=fileName; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url); a.remove();},500); return false;}
 function printSaveFolderHint(fileName){const label=selectedFolderLabel(); if(label)alert(`Save folder set to:\n${label}\n\nThe browser print/PDF window will open now. If it asks where to save ${fileName||'the PDF'}, choose this Dropbox folder. If direct folder saving is blocked, save/download normally and move the file into that folder.`);}
 
@@ -3215,8 +3217,24 @@ const wgeOriginalLogoutApp=logoutApp;
 logoutApp=async function(){blankSavedQuoteDraftNow(); return wgeOriginalLogoutApp();};
 const wgeOriginalShowTabForInvoicePath=showTab;
 showTab=function(id){wgeOriginalShowTabForInvoicePath(id); if(id==='invoice')setInvoiceDefaultSavePath();};
+function installQuotePdfAutosaveGuard(){
+ const btn=$('quotePdfBtn');
+ if(!btn||btn.dataset.wgeQuotePdfAutosaveGuard)return;
+ btn.dataset.wgeQuotePdfAutosaveGuard='1';
+ btn.addEventListener('click',async e=>{
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  syncQuoteFieldsFromPreview();
+  captureManualQuoteHtml();
+  syncQuoteFieldsFromPreview();
+  const q=saveQuote(false);
+  if(!q)return;
+  await makePdf('quoteDocument',quotePdfFileName());
+  scheduleQuoteBlankAfterSave(q.ref);
+ },true);
+}
 const wgeOriginalWireForRefinements=wire;
-wire=function(){wgeOriginalWireForRefinements(); installWgeInvoiceReminderUi();};
+wire=function(){wgeOriginalWireForRefinements(); installWgeInvoiceReminderUi(); installQuotePdfAutosaveGuard();};
 function wireNumberLockButtonGuards(){const guarded=(id,fn)=>{const el=$(id); if(!el)return; el.addEventListener('click',async e=>{e.preventDefault(); e.stopImmediatePropagation(); await fn();},true);}; const invoiceMeta=()=>({customer:$('invoiceCustomer')?.value||'',site:$('invoiceSite')?.value||'',jobRef:$('invoiceOurRef')?.value||''}); guarded('generateInvoiceBtn',async()=>{if(!$('invoiceCustomer').value.trim())fillInvoiceFromQuote(); try{await ensureInvoiceNumber(invoiceMeta());}catch(err){console.error(err); alert('Could not reserve/check this invoice number in Supabase.'); return;} updateInvoiceStagePanel(); generateInvoice();}); guarded('saveInvoiceBtn',async()=>saveInvoiceRecord()); guarded('invoicePdfBtn',async()=>{if(!(await autoSaveInvoiceBeforeIssue('PDF')))return; await makePdf('invoiceDocument',invoicePdfFileName());}); guarded('invoiceEmailBtn',async()=>{if(!(await autoSaveInvoiceBeforeIssue('Email')))return; emailInvoice();});}
 wire();
 wireNumberLockButtonGuards();
