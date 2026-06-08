@@ -3120,6 +3120,103 @@ const wgeOriginalShowTab=showTab;
 showTab=function(id){wgeOriginalShowTab(id); if(id==='customers')renderCustomerCrm(); if(id==='calendar')renderBusinessCalendar(); renderCalendarDashboard();};
 const wgeOriginalInitTabs=initTabs;
 initTabs=function(){installBusinessCalendarUi(); const ids=['start','customers','calendar','quote','standard','kensal','ashco','quotedJobs','liveJobs','timesheets','readyInvoice','invoice','analysis','rams','planner','rates','completedJobs','backup']; $('tabs').innerHTML=ids.map((id,i)=>{const label=id==='timesheets'?`Timesheets <span id="timesheetApprovalBadge" class="wgeApprovalBadge hidden">0</span>`:id==='customers'?'CUSTOMERS':id==='calendar'?'Calendar':tabTitle(id);return `<button class="tab ${i===0?'active':''}" data-group="${tabGroup(id)}" data-tab="${id}" type="button">${label}</button>`;}).join(''); $('tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]'); if(b)showTab(b.dataset.tab);}); renderBusinessCalendar();};
+
+// WGE 2026-06-08 refinements: invoice reminders, RAMS personnel guard, calendar defaults and CRM/site tightening.
+function wgeCurrentUserName(){return $('loginUser')?.value||$('quoteOwner')?.value||'Wayne Bonney';}
+function wgeInvoiceDefaultPath(){return /david/i.test(wgeCurrentUserName())?'/Users/davidguy/Library/CloudStorage/Dropbox/WGE/Invoice/2026':'/Users/waynebonney/Library/CloudStorage/Dropbox/WGE/Invoice/2026';}
+function setInvoiceDefaultSavePath(){
+ const path=wgeInvoiceDefaultPath();
+ if($('manualDropboxPath'))$('manualDropboxPath').value=path;
+ if($('dropboxPath'))$('dropboxPath').value=path;
+ localStorage.setItem(WGE_MANUAL_DROPBOX_PATH_KEY,path);
+ updateSelectedFolderDisplay();
+ return path;
+}
+function wgeFindInvoice(no){return allInvoiceRecords().find(i=>String(i.no)===String(no))||state.invoices.find(i=>String(i.no)===String(no))||null;}
+function paymentReminderPdfFileName(inv){return `Payment Reminder Invoice ${fileSafeName(inv?.no||'Invoice')} ${fileSafeName(invoiceCustomerName(inv?.customer||'Customer')).replace(/_/g,' ')}.pdf`;}
+function renderPaymentReminderDocument(inv){
+ const record={...inv,customer:invoiceCustomerName(inv.customer),address:inv.address||billingAddressFor(inv.customer,inv.site,''),paymentTerms:inv.paymentTerms||paymentTermsForNames(inv.customer,inv.site),vatTreatment:inv.vatTreatment||vatTreatmentForNames(inv.customer,inv.site)};
+ record.dueDate=record.dueDate||invoiceDueDate(record);
+ record.vat=num(record.vat); record.reverseChargeVat=num(record.reverseChargeVat); record.gross=num(record.gross||record.net+record.vat);
+ const text=`We note that invoice ${esc(record.no)} for ${money(record.gross)} remains outstanding according to our records. Please arrange payment at your earliest convenience, or contact us if this has already been paid or if there is any query preventing payment.`;
+ const html=`<div id="paymentReminderDocument" class="quoteDoc wgeDocument"><div class="wgePage">${wgeDocumentHeader()}<div class="wgeDocContent wgeFullContent"><div class="wgeCentered"><div class="wgeDocKicker">Accounts</div><h1 class="wgeTitle">Payment Reminder</h1><div class="wgeSubTitle">Outstanding Invoice Reminder</div></div><div class="wgeTopLine"><strong>Invoice No: ${esc(record.no)}</strong><span>Date: ${dateGB(today())}</span></div><div class="wgeGrid2"><div class="wgePanel"><h3>Invoice To</h3><div><strong>${esc(record.customer||'')}</strong><br>${nl(record.address||'')}</div></div><div class="wgePanel"><h3>Invoice Details</h3><div><strong>Original invoice date:</strong> ${dateGB(record.date)}<br><strong>Due date:</strong> ${dateGB(record.dueDate)}<br><strong>Customer Order No:</strong> ${esc(record.orderNo||'')}<br><strong>Our Ref:</strong> ${esc(record.ourRef||'')}<br><strong>Job Location:</strong> ${esc(record.site||'')}<br><strong>Description:</strong> ${esc(record.description||'Electrical works')}</div></div></div><div class="wgeSection"><h3>Payment Reminder</h3><div class="wgeSectionBody" contenteditable="true">${text}</div></div><div class="wgeTwoCol"><div class="wgeSection"><h3>Payment Details</h3><div class="wgeSectionBody">Please quote invoice number <strong>${esc(record.no)}</strong> when making payment.<br><br><strong>Bank Details</strong><br>Barclays Bank<br>Sort code: 20-67-37<br>Account No: 33077713</div></div><div>${invoiceTotalsHtml(record)}<div class="wgeTerms"><strong>VAT Treatment</strong><br>${esc(vatTreatmentLabel(record.vatTreatment))}<br>${esc(invoiceVatNote(record))}<br><br><strong>Payment Terms</strong><br>${esc(paymentTermsLabel(record.paymentTerms))}<br>Due date: ${dateGB(record.dueDate)}</div></div></div></div>${wgeFooter('Payment Reminder',record.no)}</div></div>`;
+ let host=$('paymentReminderHost');
+ if(!host){host=document.createElement('div'); host.id='paymentReminderHost'; host.style.position='fixed'; host.style.left='-10000px'; host.style.top='0'; document.body.appendChild(host);}
+ host.innerHTML=html;
+ return $('paymentReminderDocument');
+}
+async function makePaymentReminderPdf(no){
+ const inv=wgeFindInvoice(no||$('invoiceNo')?.value);
+ if(!inv){alert('Open or select a saved invoice first.');return;}
+ setInvoiceDefaultSavePath();
+ renderPaymentReminderDocument(inv);
+ await makePdf('paymentReminderDocument',paymentReminderPdfFileName(inv));
+}
+function enhanceInvoiceRegisterRows(){
+ const table=$('invoiceRegister'); if(!table)return;
+ table.querySelectorAll('tr').forEach(row=>{
+  if(row.dataset.paymentReminderEnhanced)return;
+  const no=row.cells?.[0]?.querySelector('strong')?.textContent?.trim();
+  const actions=row.cells?.[row.cells.length-1];
+  if(!no||!actions||actions.textContent.includes('No dated invoices'))return;
+  actions.insertAdjacentHTML('beforeend',` <button class="btn2" type="button" data-payment-reminder="${esc(no)}">Payment Reminder</button>`);
+  row.dataset.paymentReminderEnhanced='1';
+ });
+}
+function installWgeInvoiceReminderUi(){
+ const emailBtn=$('invoiceEmailBtn');
+ if(emailBtn&&!$('invoiceReminderPdfBtn'))emailBtn.insertAdjacentHTML('afterend',' <button class="btn2" id="invoiceReminderPdfBtn" type="button">Payment Reminder PDF</button>');
+ if($('invoiceReminderPdfBtn')&&!$('invoiceReminderPdfBtn').dataset.wired){$('invoiceReminderPdfBtn').dataset.wired='1';$('invoiceReminderPdfBtn').addEventListener('click',()=>makePaymentReminderPdf($('invoiceNo')?.value));}
+ const reg=$('invoiceRegister');
+ if(reg&&!reg.dataset.paymentReminderWired){reg.dataset.paymentReminderWired='1';reg.addEventListener('click',e=>{const b=e.target.closest('[data-payment-reminder]'); if(b)makePaymentReminderPdf(b.dataset.paymentReminder);});}
+ enhanceInvoiceRegisterRows();
+}
+function wgeRamsPersonnelSelected(){return selectedRamsEngineers().length>0;}
+function wgeRequireRamsPersonnel(action='continue'){if(wgeRamsPersonnelSelected())return true; alert(`Select at least one engineer/operative covered by this RAMS before you ${action}. Add a subcontractor manually if required.`); return false;}
+function blankSavedQuoteDraftNow(){
+ const q=state.currentQuote, ref=$('quoteRef')?.value||q?.ref;
+ if(!ref||!(state.quotes||[]).some(x=>String(x.ref)===String(ref)))return;
+ state.currentQuote=null;
+ window.wgeQuoteManualEdited=false;
+ fillQuote({date:today(),owner:wgeCurrentUserName(),assumptions:DEFAULT_ASSUMPTIONS,scope:'',roughScope:'',type:'standard',netPrice:0});
+ renderQuote();
+ save();
+}
+function scheduleQuoteBlankAfterSave(ref){
+ clearTimeout(window.wgeQuoteBlankTimer);
+ window.wgeQuoteBlankTimer=setTimeout(()=>{if(String($('quoteRef')?.value||'')===String(ref||''))blankSavedQuoteDraftNow();},5*60*1000);
+}
+const wgeOriginalRenderPlannerHolidaySummary=renderPlannerHolidaySummary;
+renderPlannerHolidaySummary=function(){const box=$('plannerHolidaySummary'); if(box){box.innerHTML=''; box.style.display='none';}};
+const wgeOriginalRenderInvoiceRegisterForRefinements=renderInvoiceRegister;
+renderInvoiceRegister=function(){wgeOriginalRenderInvoiceRegisterForRefinements(); enhanceInvoiceRegisterRows();};
+const wgeOriginalRenderBusinessCalendarForRefinements=renderBusinessCalendar;
+renderBusinessCalendar=function(){
+ installBusinessCalendarUi();
+ const view=$('calendarView');
+ if(view&&!localStorage.getItem('wgeCalendarPreferredView'))localStorage.setItem('wgeCalendarPreferredView','week');
+ if(view&&!view.dataset.wgeViewSave){view.dataset.wgeViewSave='1';view.addEventListener('change',()=>localStorage.setItem('wgeCalendarPreferredView',view.value));}
+ if($('calendarTodayBtn')&&!$('calendarTodayBtn').dataset.wgeTodaySave){$('calendarTodayBtn').dataset.wgeTodaySave='1';$('calendarTodayBtn').addEventListener('click',()=>localStorage.setItem('wgeCalendarPreferredView','today'),true);}
+ if(view&&localStorage.getItem('wgeCalendarPreferredView'))view.value=localStorage.getItem('wgeCalendarPreferredView');
+ wgeOriginalRenderBusinessCalendarForRefinements();
+};
+crmSameSite=function(a,b){const aa=String(a||'').trim(), bb=String(b||'').trim(); if(!aa&&!bb)return true; if(!aa||!bb)return false; return sameSiteName(aa,bb)||customerKey(aa)===customerKey(bb);};
+const wgeOriginalGenerateRams=generateRams;
+generateRams=function(){if(!wgeRequireRamsPersonnel('generate RAMS'))return; return wgeOriginalGenerateRams();};
+const wgeOriginalGenerateAcceptedQuoteRamsReview=generateAcceptedQuoteRamsReview;
+generateAcceptedQuoteRamsReview=async function(){if(!wgeRequireRamsPersonnel('generate RAMS from the quote'))return; return wgeOriginalGenerateAcceptedQuoteRamsReview();};
+const wgeOriginalSaveCurrentRams=saveCurrentRams;
+saveCurrentRams=function(showMessage=true){if(showMessage&&!wgeRequireRamsPersonnel('save RAMS'))return null; return wgeOriginalSaveCurrentRams(showMessage);};
+const wgeOriginalMakePdfForRefinements=makePdf;
+makePdf=async function(elementId,fileName){if(elementId==='ramsDocument'&&!wgeRequireRamsPersonnel('print/save RAMS'))return; if(elementId==='invoiceDocument'||elementId==='paymentReminderDocument')setInvoiceDefaultSavePath(); return wgeOriginalMakePdfForRefinements(elementId,fileName);};
+const wgeOriginalSaveQuoteAndPdf=saveQuoteAndPdf;
+saveQuoteAndPdf=async function(){const beforeRef=$('quoteRef')?.value; await wgeOriginalSaveQuoteAndPdf(); if(beforeRef&&(state.quotes||[]).some(x=>String(x.ref)===String(beforeRef)))scheduleQuoteBlankAfterSave(beforeRef);};
+const wgeOriginalLogoutApp=logoutApp;
+logoutApp=async function(){blankSavedQuoteDraftNow(); return wgeOriginalLogoutApp();};
+const wgeOriginalShowTabForInvoicePath=showTab;
+showTab=function(id){wgeOriginalShowTabForInvoicePath(id); if(id==='invoice')setInvoiceDefaultSavePath();};
+const wgeOriginalWireForRefinements=wire;
+wire=function(){wgeOriginalWireForRefinements(); installWgeInvoiceReminderUi();};
 function wireNumberLockButtonGuards(){const guarded=(id,fn)=>{const el=$(id); if(!el)return; el.addEventListener('click',async e=>{e.preventDefault(); e.stopImmediatePropagation(); await fn();},true);}; const invoiceMeta=()=>({customer:$('invoiceCustomer')?.value||'',site:$('invoiceSite')?.value||'',jobRef:$('invoiceOurRef')?.value||''}); guarded('generateInvoiceBtn',async()=>{if(!$('invoiceCustomer').value.trim())fillInvoiceFromQuote(); try{await ensureInvoiceNumber(invoiceMeta());}catch(err){console.error(err); alert('Could not reserve/check this invoice number in Supabase.'); return;} updateInvoiceStagePanel(); generateInvoice();}); guarded('saveInvoiceBtn',async()=>saveInvoiceRecord()); guarded('invoicePdfBtn',async()=>{if(!(await autoSaveInvoiceBeforeIssue('PDF')))return; await makePdf('invoiceDocument',invoicePdfFileName());}); guarded('invoiceEmailBtn',async()=>{if(!(await autoSaveInvoiceBeforeIssue('Email')))return; emailInvoice();});}
 wire();
 wireNumberLockButtonGuards();
