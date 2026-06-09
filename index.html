@@ -3432,6 +3432,59 @@ function installChatGptQuoteHelper(){
 }
 const wgeOriginalWireForCostingBatchAndChatGpt=wire;
 wire=function(){wgeOriginalWireForCostingBatchAndChatGpt(); installBatchInvoiceEmailUi(); updateBatchInvoicePanel(); installChatGptQuoteHelper(); enhanceJobCostingLinkRows();};
+
+// WGE 2026-06-09 refinement: show business calendar bookings in the labour planner to help avoid double booking.
+function wgeCalendarTimeRange(e){return [e.start,e.end].filter(Boolean).join(' - ')||'All day';}
+const wgeOriginalCalendarWorkWeekHtmlForTimes=calendarWorkWeekHtml;
+calendarWorkWeekHtml=function(anchor,events){
+ const start=mondayFor(anchor), names=['Monday','Tuesday','Wednesday','Thursday','Friday'];
+ return `<div class="grid grid5">${names.map((name,i)=>{const d=addDays(start,i), dayEvents=events.filter(e=>e.date===d); return `<div class="notice" style="min-height:220px"><h3 style="margin-top:0">${name}</h3><div class="muted small">${dateGB(d)}</div>${dayEvents.map(e=>`<div class="notice" style="margin-top:8px;background:white"><strong>${esc(wgeCalendarTimeRange(e))}</strong> ${esc(e.title)}<br><span class="small muted">${esc(e.type)}${e.jobRef?' - '+esc(e.jobRef):''}</span><div style="margin-top:6px">${calendarActionsHtml(e)}</div></div>`).join('')||'<div class="small muted" style="margin-top:8px">No business events.</div>'}</div>`;}).join('')}</div>`;
+};
+function wgePlannerAllCalendarEvents(){
+ try{return typeof wgeOriginalCalendarAllEventsForOwners==='function'?wgeOriginalCalendarAllEventsForOwners():calendarAllEvents();}
+ catch(e){return [];}
+}
+function wgePlannerNameTokens(employee){
+ const name=String(employee||'').toLowerCase(), first=name.split(/\s+/)[0]||'';
+ const tokens=[name,first].filter(Boolean);
+ if(/wayne/.test(name))tokens.push('wb','wayne bonney');
+ if(/david/.test(name))tokens.push('dg','david guy');
+ return tokens;
+}
+function wgeCalendarEventMatchesPlannerPerson(e,employee){
+ const employeeName=String(employee||'').trim();
+ const text=[e.owner,e.attendees,e.notes].filter(Boolean).join(' ').toLowerCase();
+ if(!text&&String(e.source||'')!=='Manual')return false;
+ if(/\bboth\b|\ball\b|wayne and david|david and wayne/i.test(text))return /wayne|david/i.test(employeeName);
+ return wgePlannerNameTokens(employeeName).some(t=>t&&text.includes(t));
+}
+function wgePlannerCalendarEventsFor(employee,date){
+ return wgePlannerAllCalendarEvents().filter(e=>String(e.date||'')===String(date)&&!['Cancelled','Completed'].includes(String(e.status||'Planned'))&&wgeCalendarEventMatchesPlannerPerson(e,employee)).sort((a,b)=>String(a.start||'').localeCompare(String(b.start||'')));
+}
+function wgePlannerCalendarHtml(employee,date){
+ const events=wgePlannerCalendarEventsFor(employee,date);
+ if(!events.length)return '';
+ return `<div class="plannerCalendarBlock">${events.map(e=>`<div class="plannerCalendarEvent" title="${esc([e.type,e.customer,e.site,e.notes].filter(Boolean).join(' | '))}"><strong>${esc(wgeCalendarTimeRange(e))}</strong><br>${esc(e.title)}${e.site?`<br><span>${esc(e.site)}</span>`:''}</div>`).join('')}</div>`;
+}
+function injectPlannerCalendarEvents(){
+ const body=$('plannerBody'); if(!body)return;
+ body.querySelectorAll('[data-plan-employee][data-plan-date]').forEach(input=>{
+  const cell=input.closest('td');
+  if(!cell||cell.dataset.calendarInjected)return;
+  const html=wgePlannerCalendarHtml(input.dataset.planEmployee,input.dataset.planDate);
+  if(html)input.insertAdjacentHTML('beforebegin',html);
+  cell.dataset.calendarInjected='1';
+ });
+}
+function installPlannerCalendarStyles(){
+ if(document.getElementById('wgePlannerCalendarStyles'))return;
+ const style=document.createElement('style');
+ style.id='wgePlannerCalendarStyles';
+ style.textContent='.plannerCalendarBlock{display:grid;gap:6px;margin-bottom:7px}.plannerCalendarEvent{background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:10px;padding:7px;font-size:12px;line-height:1.25;font-weight:800}.plannerCalendarEvent span{font-weight:700;color:#9a3412}.plannerCell input{margin-top:4px}';
+ document.head.appendChild(style);
+}
+const wgeOriginalRenderLabourPlannerForCalendarBookings=renderLabourPlanner;
+renderLabourPlanner=function(){wgeOriginalRenderLabourPlannerForCalendarBookings(); installPlannerCalendarStyles(); injectPlannerCalendarEvents();};
 function wireNumberLockButtonGuards(){const guarded=(id,fn)=>{const el=$(id); if(!el)return; el.addEventListener('click',async e=>{e.preventDefault(); e.stopImmediatePropagation(); await fn();},true);}; const invoiceMeta=()=>({customer:$('invoiceCustomer')?.value||'',site:$('invoiceSite')?.value||'',jobRef:$('invoiceOurRef')?.value||''}); guarded('generateInvoiceBtn',async()=>{if(!$('invoiceCustomer').value.trim())fillInvoiceFromQuote(); try{await ensureInvoiceNumber(invoiceMeta());}catch(err){console.error(err); alert('Could not reserve/check this invoice number in Supabase.'); return;} updateInvoiceStagePanel(); generateInvoice();}); guarded('saveInvoiceBtn',async()=>saveInvoiceRecord()); guarded('invoicePdfBtn',async()=>{if(!(await autoSaveInvoiceBeforeIssue('PDF')))return; await makePdf('invoiceDocument',invoicePdfFileName());}); guarded('invoiceEmailBtn',async()=>{if(!(await autoSaveInvoiceBeforeIssue('Email')))return; emailInvoice();});}
 wire();
 wireNumberLockButtonGuards();
