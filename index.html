@@ -3296,6 +3296,142 @@ function installQuotePdfAutosaveGuard(){
 }
 const wgeOriginalWireForRefinements=wire;
 wire=function(){wgeOriginalWireForRefinements(); installWgeInvoiceReminderUi(); installQuotePdfAutosaveGuard();};
+
+// WGE 2026-06-09 refinements: linked costing groups, monthly batch invoice email drafts and ChatGPT prompt helper.
+function wgeCleanJobRef(ref){return String(ref||'').trim().toUpperCase().replace(/\b(WB|DG)\s*-?\s*(\d+)/i,'$1-$2').replace(/\s+/g,'');}
+function wgeEnsureJobCostingLinks(){if(!state.jobCostingLinks||typeof state.jobCostingLinks!=='object'||Array.isArray(state.jobCostingLinks))state.jobCostingLinks={}; return state.jobCostingLinks;}
+function wgeAllProjectRefs(){return [...new Set(projectRows().map(r=>wgeCleanJobRef(r.ref)).filter(Boolean))];}
+function wgeCostingGroupRoot(ref){
+ const links=wgeEnsureJobCostingLinks(), start=wgeCleanJobRef(ref);
+ let current=start, guard=0;
+ while(links[current]&&links[current]!==current&&guard<20){current=wgeCleanJobRef(links[current]); guard++;}
+ return current||start;
+}
+function wgeLinkedCostingRefs(ref){
+ const root=wgeCostingGroupRoot(ref), refs=wgeAllProjectRefs();
+ return refs.filter(r=>wgeCostingGroupRoot(r)===root).sort();
+}
+function wgeGroupInvoiceNet(ref){return wgeLinkedCostingRefs(ref).reduce((a,r)=>a+invoiceNetForRef(r),0);}
+function wgeGroupQuoteValue(ref){return wgeLinkedCostingRefs(ref).reduce((a,r)=>a+quoteValueForRef(r),0);}
+function wgeGroupActuals(ref){
+ return wgeLinkedCostingRefs(ref).reduce((a,r)=>{const actual=calculateSharedActuals(r); a.labourHours+=num(actual.labourHours); a.labourCost+=num(actual.labourCost); return a;},{labourHours:0,labourCost:0});
+}
+function wgeGroupSummaryText(ref){
+ const linked=wgeLinkedCostingRefs(ref), actual=wgeGroupActuals(ref);
+ if(linked.length<2)return '';
+ return `Costing group ${esc(wgeCostingGroupRoot(ref))}: ${linked.map(esc).join(', ')} | Quote ${money(wgeGroupQuoteValue(ref))} | Invoiced ${money(wgeGroupInvoiceNet(ref))} | Labour ${num(actual.labourHours).toFixed(2)} hrs / ${money(actual.labourCost)}`;
+}
+function wgeSetCostingGroup(ref,target){
+ const links=wgeEnsureJobCostingLinks(), clean=wgeCleanJobRef(ref), tgt=wgeCleanJobRef(target);
+ if(!clean)return;
+ if(!tgt){delete links[clean]; save(); renderProjectPipeline(); return;}
+ const known=wgeAllProjectRefs();
+ if(!known.includes(tgt)&&!confirm(`${tgt} is not currently in the job list. Link costing to this reference anyway?`))return;
+ links[clean]=wgeCostingGroupRoot(tgt);
+ save();
+ renderProjectPipeline();
+ alert(`${clean} is now linked for costing to group ${links[clean]}. The lads can still pick either job number on their timesheets; analysis will show the group together.`);
+}
+function wgePromptCostingLink(ref){
+ const clean=wgeCleanJobRef(ref), linked=wgeLinkedCostingRefs(clean), current=wgeCostingGroupRoot(clean);
+ const msg=`Enter the main job reference to group costing with.\n\nCurrent job: ${clean}\nCurrent group: ${current}\nLinked jobs: ${linked.join(', ')||clean}\n\nLeave blank to unlink/reset this job.`;
+ const target=prompt(msg,current===clean?'':current);
+ if(target===null)return;
+ wgeSetCostingGroup(clean,target);
+}
+function enhanceJobCostingLinkRows(){
+ ['liveJobsTable','readyInvoiceTable','completedJobsTable'].forEach(id=>{
+  const table=$(id); if(!table)return;
+  table.querySelectorAll('tr').forEach(row=>{
+   const ref=row.cells?.[0]?.querySelector('strong')?.textContent?.trim();
+   const actions=row.cells?.[row.cells.length-1];
+   if(!ref||!actions||row.dataset.costingLinkEnhanced)return;
+   const summary=wgeGroupSummaryText(ref);
+   if(summary){
+    const statusCell=id==='liveJobsTable'?row.cells?.[10]:id==='completedJobsTable'?row.cells?.[6]:null;
+    (statusCell||actions).insertAdjacentHTML('beforeend',`<br><span class="pill" title="${esc(summary)}">Linked costing</span>`);
+   }
+   actions.insertAdjacentHTML('beforeend',` <button class="btn2" type="button" data-link-costing="${esc(ref)}">Link Costing</button>`);
+   row.dataset.costingLinkEnhanced='1';
+  });
+ });
+}
+const wgeOriginalRenderProjectPipelineForCostingLinks=renderProjectPipeline;
+renderProjectPipeline=function(){wgeOriginalRenderProjectPipelineForCostingLinks(); enhanceJobCostingLinkRows();};
+const wgeOriginalHandleProjectActionForCostingLinks=handleProjectAction;
+handleProjectAction=function(e){
+ const link=e.target.closest('[data-link-costing]');
+ if(link){wgePromptCostingLink(link.dataset.linkCosting); return;}
+ return wgeOriginalHandleProjectActionForCostingLinks(e);
+};
+
+function wgeInvoiceBatchMonth(){return $('invoiceMonthFilter')?.value||invoiceMonth(today());}
+function wgeBatchInvoiceRows(){const month=wgeInvoiceBatchMonth(); return allInvoiceRecords().filter(i=>i.date&&invoiceMonth(i.date)===month);}
+function wgeBatchInvoiceGroupKey(inv){return `${invoiceCustomerName(inv.customer)||'Unknown'}||${inv.site||''}`;}
+function wgeBatchInvoiceGroupLabel(key){const [customer,site]=String(key).split('||'); return site?`${customer} - ${site}`:customer;}
+function wgeBatchInvoiceRecipient(rows){
+ const first=rows[0]||{};
+ const found=findSiteRecordByNames(first.customer,first.site);
+ return first.invoiceEmail||found.s?.invoiceEmail||found.c?.invoiceEmail||found.c?.email||'';
+}
+function installBatchInvoiceEmailUi(){
+ if($('batchInvoiceEmailPanel'))return;
+ const register=$('invoiceRegister');
+ const anchor=register?.closest('.tableWrap');
+ if(!anchor)return;
+ anchor.insertAdjacentHTML('beforebegin',`<div id="batchInvoiceEmailPanel" class="notice" style="margin-top:12px"><h3>Batch Invoice Email</h3><p class="muted small">Use this for month-end invoice runs. Select a customer/site for the month, then draft one email listing the invoices to attach.</p><div class="grid grid3"><div><label>Customer / Site</label><select id="batchInvoiceCustomerSite"><option value="">All invoice customers this month</option></select></div><div class="notice"><strong>Invoices:</strong> <span id="batchInvoiceCount">0</span></div><div class="notice"><strong>Total gross:</strong> <span id="batchInvoiceGross">£0.00</span></div></div><div class="flex" style="margin-top:10px"><button class="btn2" id="batchInvoiceEmailBtn" type="button">Email Month Invoices</button></div></div>`);
+ $('batchInvoiceCustomerSite')?.addEventListener('change',updateBatchInvoicePanel);
+ $('batchInvoiceEmailBtn')?.addEventListener('click',emailBatchInvoices);
+}
+function updateBatchInvoicePanel(){
+ const select=$('batchInvoiceCustomerSite'); if(!select)return;
+ const previous=select.value, rows=wgeBatchInvoiceRows(), groups=[...new Map(rows.map(i=>[wgeBatchInvoiceGroupKey(i),i])).keys()].sort((a,b)=>wgeBatchInvoiceGroupLabel(a).localeCompare(wgeBatchInvoiceGroupLabel(b)));
+ select.innerHTML='<option value="">All invoice customers this month</option>'+groups.map(k=>`<option value="${esc(k)}" ${k===previous?'selected':''}>${esc(wgeBatchInvoiceGroupLabel(k))}</option>`).join('');
+ if(previous&&groups.includes(previous))select.value=previous;
+ const chosen=select.value;
+ const visible=chosen?rows.filter(i=>wgeBatchInvoiceGroupKey(i)===chosen):rows;
+ if($('batchInvoiceCount'))$('batchInvoiceCount').textContent=visible.length;
+ if($('batchInvoiceGross'))$('batchInvoiceGross').textContent=money(visible.reduce((a,i)=>a+num(i.gross),0));
+}
+function emailBatchInvoices(){
+ const rows=wgeBatchInvoiceRows().filter(i=>!$('batchInvoiceCustomerSite')?.value||wgeBatchInvoiceGroupKey(i)===$('batchInvoiceCustomerSite').value).sort((a,b)=>String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
+ if(!rows.length){alert('No invoices found for this month/customer.');return;}
+ const selectedGroup=$('batchInvoiceCustomerSite')?.value||'';
+ const groupedCustomer=selectedGroup?wgeBatchInvoiceGroupLabel(selectedGroup):'all selected customers';
+ const to=$('batchInvoiceCustomerSite')?.value?wgeBatchInvoiceRecipient(rows):'';
+ if(!to&&selectedGroup&&!confirm('No single accounts email was found for this batch. Open a blank email draft anyway?'))return;
+ const invoiceNumbers=rows.map(i=>String(i.no||'')).filter(Boolean);
+ const range=invoiceNumbers.length>1?`${invoiceNumbers[0]} to ${invoiceNumbers[invoiceNumbers.length-1]}`:invoiceNumbers[0];
+ const lines=rows.map(i=>`- Invoice ${i.no}${i.ourRef?` / ${i.ourRef}`:''} - ${i.site||i.customer||''} - ${i.description||''} - ${money(i.gross)}`).join('\n');
+ const body=`Hi,\n\nPlease find attached invoices ${range} for ${groupedCustomer}.\n\n${lines}\n\nKind regards,\nWill Guy Electrical LTD`;
+ const subject=`WGE invoices ${range} - ${groupedCustomer} - ${monthLabel(wgeInvoiceBatchMonth())}`;
+ if(to)openEmailDraft(to,subject,body);
+ else window.location.href=`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+const wgeOriginalRenderInvoiceRegisterForBatchEmail=renderInvoiceRegister;
+renderInvoiceRegister=function(){wgeOriginalRenderInvoiceRegisterForBatchEmail(); installBatchInvoiceEmailUi(); updateBatchInvoicePanel();};
+
+function wgeQuoteRewritePromptText(){
+ const rough=($('roughScope')?.value||$('scopeWorks')?.value||'').trim();
+ const project=$('quoteProject')?.value||'';
+ const customer=$('quoteCustomerName')?.value||'';
+ const site=$('quoteSiteName')?.value||'';
+ return `You are an experienced UK electrical estimator working for Will Guy Electrical Ltd.\n\nRewrite the following rough quotation notes into professional commercial electrical contractor wording.\n\nRules:\n- Preserve every item of scope.\n- Preserve all technical information, materials, testing, exclusions, return visits and customer requirements.\n- Do not summarise or remove any activity.\n- Improve spelling, grammar, sentence structure and professionalism only.\n- Use British English.\n- Return only customer-ready quotation wording.\n\nCustomer: ${customer}\nSite: ${site}\nProject: ${project}\n\nRough notes:\n${rough}`;
+}
+async function copyChatGptQuotePrompt(){
+ const text=wgeQuoteRewritePromptText();
+ if(!($('roughScope')?.value||$('scopeWorks')?.value||'').trim()){alert('Add rough scope notes first, then copy the ChatGPT prompt.');return;}
+ try{await navigator.clipboard.writeText(text); alert('ChatGPT quote prompt copied. Paste it into ChatGPT, then paste the finished wording back into Rough Scope Notes or the large editor.');}
+ catch(err){prompt('Copy this prompt into ChatGPT:',text);}
+}
+function installChatGptQuoteHelper(){
+ const rewrite=$('rewriteBtn');
+ if(!rewrite||$('chatGptQuotePromptBtn'))return;
+ rewrite.insertAdjacentHTML('afterend',' <button class="btn2" id="chatGptQuotePromptBtn" type="button">Copy ChatGPT Prompt</button>');
+ $('chatGptQuotePromptBtn')?.addEventListener('click',copyChatGptQuotePrompt);
+}
+const wgeOriginalWireForCostingBatchAndChatGpt=wire;
+wire=function(){wgeOriginalWireForCostingBatchAndChatGpt(); installBatchInvoiceEmailUi(); updateBatchInvoicePanel(); installChatGptQuoteHelper(); enhanceJobCostingLinkRows();};
 function wireNumberLockButtonGuards(){const guarded=(id,fn)=>{const el=$(id); if(!el)return; el.addEventListener('click',async e=>{e.preventDefault(); e.stopImmediatePropagation(); await fn();},true);}; const invoiceMeta=()=>({customer:$('invoiceCustomer')?.value||'',site:$('invoiceSite')?.value||'',jobRef:$('invoiceOurRef')?.value||''}); guarded('generateInvoiceBtn',async()=>{if(!$('invoiceCustomer').value.trim())fillInvoiceFromQuote(); try{await ensureInvoiceNumber(invoiceMeta());}catch(err){console.error(err); alert('Could not reserve/check this invoice number in Supabase.'); return;} updateInvoiceStagePanel(); generateInvoice();}); guarded('saveInvoiceBtn',async()=>saveInvoiceRecord()); guarded('invoicePdfBtn',async()=>{if(!(await autoSaveInvoiceBeforeIssue('PDF')))return; await makePdf('invoiceDocument',invoicePdfFileName());}); guarded('invoiceEmailBtn',async()=>{if(!(await autoSaveInvoiceBeforeIssue('Email')))return; emailInvoice();});}
 wire();
 wireNumberLockButtonGuards();
