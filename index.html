@@ -3485,6 +3485,131 @@ function installPlannerCalendarStyles(){
 }
 const wgeOriginalRenderLabourPlannerForCalendarBookings=renderLabourPlanner;
 renderLabourPlanner=function(){wgeOriginalRenderLabourPlannerForCalendarBookings(); installPlannerCalendarStyles(); injectPlannerCalendarEvents();};
+
+// WGE 2026-06-09 refinements: persistent customer deletion and manual calendar locations.
+const WGE_MANUAL_CALENDAR_SITE='__manual_calendar_site__';
+function wgeCustomerDeleteKeys(c){
+ const keys=[c?.id,slugify(c?.name||''),canonicalCustomerId(c?.name||'')].filter(Boolean);
+ if(/westbridge|west\s*foods|westbridge foods/i.test(String(c?.name||'')+' '+String(c?.id||'')))keys.push('westbridge-food-group','westbridge-foods-limited-newmarket');
+ return [...new Set(keys)];
+}
+function wgeRememberDeletedCustomer(c){wgeCustomerDeleteKeys(c).forEach(rememberDeletedDefaultCustomer);}
+function wgeCustomerIsDeleted(c,deleted=deletedDefaultCustomers()){
+ const keys=wgeCustomerDeleteKeys(c);
+ const text=(String(c?.id||'')+' '+String(c?.name||'')+' '+(c?.sites||[]).map(s=>s.name||'').join(' ')).toLowerCase();
+ return keys.some(k=>deleted.includes(k))||text.includes('westbridge food')||text.includes('westbridge-food');
+}
+function wgeFilterCustomerArray(customers,deleted=deletedDefaultCustomers()){
+ return (Array.isArray(customers)?customers:[]).filter(c=>!wgeCustomerIsDeleted(c,deleted));
+}
+function wgeApplyCustomerDeletionFilter(){
+ const before=(state.customers||[]).length;
+ rememberDeletedDefaultCustomer('westbridge-food-group');
+ state.customers=wgeFilterCustomerArray(state.customers);
+ return before!==state.customers.length;
+}
+const wgeOriginalDeleteCustomerRecordForPersistentDelete=deleteCustomerRecord;
+deleteCustomerRecord=function(customerId){
+ const before=(state.customers||[]).find(x=>x.id===customerId);
+ wgeOriginalDeleteCustomerRecordForPersistentDelete(customerId);
+ if(before&&!(state.customers||[]).some(x=>x.id===customerId)){
+  wgeRememberDeletedCustomer(before);
+  wgeApplyCustomerDeletionFilter();
+  save();
+  if(cloudSyncReady)uploadCloudData(false);
+ }
+};
+const wgeOriginalDeleteCustomerSiteForPersistentDelete=deleteCustomerSite;
+deleteCustomerSite=function(customerId,siteId){
+ const before=(state.customers||[]).find(x=>x.id===customerId);
+ wgeOriginalDeleteCustomerSiteForPersistentDelete(customerId,siteId);
+ if(before&&!(state.customers||[]).some(x=>x.id===customerId)){
+  wgeRememberDeletedCustomer(before);
+  wgeApplyCustomerDeletionFilter();
+  save();
+  if(cloudSyncReady)uploadCloudData(false);
+ }
+};
+const wgeOriginalSaveCustomerDbForPersistentDelete=saveCustomerDb;
+saveCustomerDb=function(){
+ const name=canonicalCustomerName($('customerDbName')?.value||'');
+ const id=canonicalCustomerId(name);
+ if(id&&!/westbridge/i.test(name))forgetDeletedDefaultCustomer(id);
+ return wgeOriginalSaveCustomerDbForPersistentDelete();
+};
+const wgeOriginalCloudPayloadForCustomerDeletes=cloudPayload;
+cloudPayload=function(){wgeApplyCustomerDeletionFilter(); const payload=wgeOriginalCloudPayloadForCustomerDeletes(); payload.data.customers=wgeFilterCustomerArray(payload.data.customers,payload.deletedDefaultCustomers||deletedDefaultCustomers()); payload.deletedDefaultCustomers=[...new Set([...(payload.deletedDefaultCustomers||[]),...deletedDefaultCustomers(),'westbridge-food-group'])]; return payload;};
+const wgeOriginalMergeCloudPayloadsForCustomerDeletes=mergeCloudPayloads;
+mergeCloudPayloads=function(localPayload,remotePayload){
+ const out=wgeOriginalMergeCloudPayloadsForCustomerDeletes(localPayload,remotePayload);
+ const deleted=[...new Set([...(remotePayload?.deletedDefaultCustomers||[]),...(localPayload?.deletedDefaultCustomers||[]),...deletedDefaultCustomers(),'westbridge-food-group'])];
+ out.deletedDefaultCustomers=deleted;
+ if(out.data)out.data.customers=wgeFilterCustomerArray(out.data.customers,deleted);
+ return out;
+};
+const wgeOriginalApplyCloudPayloadForCustomerDeletes=applyCloudPayload;
+applyCloudPayload=function(payload){
+ wgeOriginalApplyCloudPayloadForCustomerDeletes(payload);
+ if(wgeApplyCustomerDeletionFilter()){
+  saveLocalOnly();
+  cloudPending(true);
+  try{renderAllAfterCloudSync();}catch(e){renderCustomers();}
+ }
+};
+const wgeOriginalRenderCustomersForCustomerDeletes=renderCustomers;
+renderCustomers=function(){if(wgeApplyCustomerDeletionFilter())saveLocalOnly(); wgeOriginalRenderCustomersForCustomerDeletes();};
+
+function installCalendarManualLocationUi(){
+ const customerSelect=$('calendarCustomerSite');
+ if(!customerSelect||$('calendarManualLocationFields'))return;
+ customerSelect.closest('div')?.insertAdjacentHTML('afterend',`<div id="calendarManualLocationFields" class="hidden"><label>Manual Customer / Location</label><input id="calendarManualCustomer" placeholder="e.g. New customer or other location"></div><div id="calendarManualSiteFields" class="hidden"><label>Manual Site / Place</label><input id="calendarManualSite" placeholder="e.g. Meeting place / site"></div>`);
+ customerSelect.addEventListener('change',toggleCalendarManualLocation);
+ toggleCalendarManualLocation();
+}
+function toggleCalendarManualLocation(){
+ const manual=$('calendarCustomerSite')?.value===WGE_MANUAL_CALENDAR_SITE;
+ ['calendarManualLocationFields','calendarManualSiteFields'].forEach(id=>$(id)?.classList.toggle('hidden',!manual));
+}
+const wgeOriginalCalendarCustomerSiteOptionsForManual=calendarCustomerSiteOptions;
+calendarCustomerSiteOptions=function(selected=''){
+ const manualSelected=selected===WGE_MANUAL_CALENDAR_SITE?'selected':'';
+ return `<option value="">Select existing customer/site</option><option value="${WGE_MANUAL_CALENDAR_SITE}" ${manualSelected}>Manual / Other Location</option>`+wgeOriginalCalendarCustomerSiteOptionsForManual(selected);
+};
+saveCalendarEvent=function(){
+ calendarEnsureState();
+ const selected=$('calendarCustomerSite')?.value||'';
+ const manual=selected===WGE_MANUAL_CALENDAR_SITE;
+ const rec=manual?{customer:$('calendarManualCustomer')?.value.trim()||'Manual / Other Location',site:$('calendarManualSite')?.value.trim()||''}:crmProfile(selected);
+ const jobRef=$('calendarJobRef')?.value||'';
+ const editingId=window.wgeEditingCalendarEventId||'', existing=editingId?calendarAllEvents().find(e=>e.id===editingId):null;
+ const event={id:editingId||newId(),title:$('calendarTitle').value.trim(),date:$('calendarDate').value||today(),start:$('calendarStart').value,end:$('calendarEnd').value,customer:rec.customer||existing?.customer||'',site:rec.site||existing?.site||'',jobRef,type:$('calendarType').value,notes:$('calendarNotes').value,owner:$('calendarOwner')?.value||existing?.owner||wgeCurrentUserName(),attendees:$('calendarAttendees').value,reminder:$('calendarReminder').value==='yes',status:$('calendarStatus').value,linkedType:jobRef?'Live Job':(manual?'Manual Location':'Customer'),linkedRef:jobRef||(!manual?rec.id:'')||existing?.linkedRef||'',manualLocation:manual,createdAt:existing?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
+ if(!event.title){alert('Add an event title.');return;}
+ state.calendarEvents=state.calendarEvents.filter(e=>e.id!==event.id);
+ state.calendarEvents.unshift(event);
+ window.wgeEditingCalendarEventId='';
+ if($('calendarSaveBtn'))$('calendarSaveBtn').textContent='Save Calendar Event';
+ save();
+ ['calendarTitle','calendarNotes','calendarAttendees','calendarManualCustomer','calendarManualSite'].forEach(id=>{if($(id))$(id).value='';});
+ if($('calendarCustomerSite')){$('calendarCustomerSite').value=''; toggleCalendarManualLocation();}
+ renderBusinessCalendar();
+};
+const wgeOriginalEditCalendarEventForManualLocation=editCalendarEvent;
+editCalendarEvent=function(id){
+ const e=(typeof wgeOriginalCalendarAllEventsForOwners==='function'?wgeOriginalCalendarAllEventsForOwners():calendarAllEvents()).find(x=>String(x.id)===String(id));
+ wgeOriginalEditCalendarEventForManualLocation(id);
+ installCalendarManualLocationUi();
+ const existingId=e?calendarCustomerSiteIdForEvent(e):'';
+ if(e&&(e.manualLocation||(!existingId&&(e.customer||e.site)))){
+  if($('calendarCustomerSite'))$('calendarCustomerSite').value=WGE_MANUAL_CALENDAR_SITE;
+  if($('calendarManualCustomer'))$('calendarManualCustomer').value=e.customer||'';
+  if($('calendarManualSite'))$('calendarManualSite').value=e.site||'';
+  toggleCalendarManualLocation();
+ }
+};
+const wgeOriginalRenderBusinessCalendarForManualLocation=renderBusinessCalendar;
+renderBusinessCalendar=function(){wgeOriginalRenderBusinessCalendarForManualLocation(); installCalendarManualLocationUi(); toggleCalendarManualLocation();};
+const wgeOriginalWireForCustomerAndCalendarRefinements=wire;
+wire=function(){wgeOriginalWireForCustomerAndCalendarRefinements(); wgeApplyCustomerDeletionFilter(); renderCustomers(); installCalendarManualLocationUi();};
 function wireNumberLockButtonGuards(){const guarded=(id,fn)=>{const el=$(id); if(!el)return; el.addEventListener('click',async e=>{e.preventDefault(); e.stopImmediatePropagation(); await fn();},true);}; const invoiceMeta=()=>({customer:$('invoiceCustomer')?.value||'',site:$('invoiceSite')?.value||'',jobRef:$('invoiceOurRef')?.value||''}); guarded('generateInvoiceBtn',async()=>{if(!$('invoiceCustomer').value.trim())fillInvoiceFromQuote(); try{await ensureInvoiceNumber(invoiceMeta());}catch(err){console.error(err); alert('Could not reserve/check this invoice number in Supabase.'); return;} updateInvoiceStagePanel(); generateInvoice();}); guarded('saveInvoiceBtn',async()=>saveInvoiceRecord()); guarded('invoicePdfBtn',async()=>{if(!(await autoSaveInvoiceBeforeIssue('PDF')))return; await makePdf('invoiceDocument',invoicePdfFileName());}); guarded('invoiceEmailBtn',async()=>{if(!(await autoSaveInvoiceBeforeIssue('Email')))return; emailInvoice();});}
 wire();
 wireNumberLockButtonGuards();
